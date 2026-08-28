@@ -68,6 +68,9 @@ public struct MemoryBreakdownCard: View {
                     LegendItem(color: .teal, label: "Pasif (Önbellek)", value: ByteFormatter.formatMemory(stats.inactiveBytes))
                     LegendItem(color: .green, label: "Tamamen Boş", value: ByteFormatter.formatMemory(stats.freeBytes))
                     LegendItem(color: .indigo, label: "Kullanılabilir", value: ByteFormatter.formatMemory(stats.freeAndInactiveBytes))
+                    if stats.swapTotalBytes > 0 {
+                        LegendItem(color: .red, label: "Swap (Takas Alanı)", value: "\(ByteFormatter.formatMemory(stats.swapUsedBytes)) / \(ByteFormatter.formatMemory(stats.swapTotalBytes))")
+                    }
                 }
             }
         }

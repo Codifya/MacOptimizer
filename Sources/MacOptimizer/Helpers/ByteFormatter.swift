@@ -26,4 +26,14 @@ public enum ByteFormatter: Sendable {
             return ("\(bytes)", "B")
         }
     }
+    
+    public static func formatSpeed(bytesPerSec: Double) -> String {
+        if bytesPerSec >= 1_048_576.0 {
+            return String(format: "%.1f MB/s", bytesPerSec / 1_048_576.0)
+        } else if bytesPerSec >= 1024.0 {
+            return String(format: "%.1f KB/s", bytesPerSec / 1024.0)
+        } else {
+            return String(format: "%.0f B/s", max(0.0, bytesPerSec))
+        }
+    }
 }

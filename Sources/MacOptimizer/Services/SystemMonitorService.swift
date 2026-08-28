@@ -11,6 +11,9 @@ public actor SystemMonitorService {
     private var lastCPULoadInfo: host_cpu_load_info?
     private var cachedProcesses: [ProcessInfoModel] = []
     private var lastProcessFetchTime: Date?
+    private var lastNetworkSampleTime: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
+    private var lastTotalInBytes: UInt64 = 0
+    private var lastTotalOutBytes: UInt64 = 0
     
     public init() {}
     
@@ -258,6 +261,72 @@ public actor SystemMonitorService {
         info.uptimeString = getSystemUptime()
         
         return info
+    }
+    
+    // MARK: - Network Throughput & Interface Statistics (Darwin getifaddrs)
+    public func fetchNetworkStats() -> NetworkStats {
+        var stats = NetworkStats()
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else {
+            return stats
+        }
+        defer { freeifaddrs(ifaddr) }
+        
+        var totalIn: UInt64 = 0
+        var totalOut: UInt64 = 0
+        var activeInterface = "en0"
+        var ipAddr = "127.0.0.1"
+        
+        var ptr: UnsafeMutablePointer<ifaddrs>? = firstAddr
+        while let current = ptr {
+            let name = String(cString: current.pointee.ifa_name)
+            let flags = Int32(current.pointee.ifa_flags)
+            let isUp = (flags & IFF_UP) == IFF_UP
+            let isRunning = (flags & IFF_RUNNING) == IFF_RUNNING
+            let isLoopback = (flags & IFF_LOOPBACK) == IFF_LOOPBACK
+            
+            if isUp && isRunning && !isLoopback {
+                if let sa = current.pointee.ifa_addr {
+                    if sa.pointee.sa_family == UInt8(AF_LINK) {
+                        if let data = current.pointee.ifa_data {
+                            let networkData = data.assumingMemoryBound(to: if_data.self).pointee
+                            totalIn += UInt64(networkData.ifi_ibytes)
+                            totalOut += UInt64(networkData.ifi_obytes)
+                            activeInterface = name
+                        }
+                    } else if sa.pointee.sa_family == UInt8(AF_INET) {
+                        var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                        if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST) == 0 {
+                            ipAddr = hostname.withUnsafeBufferPointer { ptr in
+                                ptr.baseAddress != nil ? String(cString: ptr.baseAddress!) : "127.0.0.1"
+                            }
+                        }
+                    }
+                }
+            }
+            
+            ptr = current.pointee.ifa_next
+        }
+        
+        let currentTime = CFAbsoluteTimeGetCurrent()
+        let elapsed = currentTime - lastNetworkSampleTime
+        
+        if elapsed > 0.1 && lastTotalInBytes > 0 && totalIn >= lastTotalInBytes {
+            stats.downloadBytesPerSec = Double(totalIn - lastTotalInBytes) / elapsed
+            stats.uploadBytesPerSec = Double(totalOut - lastTotalOutBytes) / elapsed
+        }
+        
+        lastNetworkSampleTime = currentTime
+        lastTotalInBytes = totalIn
+        lastTotalOutBytes = totalOut
+        
+        stats.totalDownloadBytes = totalIn
+        stats.totalUploadBytes = totalOut
+        stats.activeInterfaceName = activeInterface
+        stats.localIPAddress = ipAddr
+        
+        return stats
     }
     
     // MARK: - Running Processes Scanner (Optimized with short-term cache)

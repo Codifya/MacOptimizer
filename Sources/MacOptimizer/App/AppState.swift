@@ -69,6 +69,7 @@ public final class AppState: ObservableObject {
     @Published public var cpuStats = CPUStats()
     @Published public var diskStats = DiskStats()
     @Published public var batteryStats = BatteryStats()
+    @Published public var networkStats = NetworkStats()
     @Published public var hardwareInfo = HardwareInfo()
     @Published public var runningProcesses: [ProcessInfoModel] = []
     
@@ -189,6 +190,7 @@ public final class AppState: ObservableObject {
             let cpu = await SystemMonitorService.shared.fetchCPUStats()
             let disk = await SystemMonitorService.shared.fetchDiskStats()
             let batt = await SystemMonitorService.shared.fetchBatteryStats()
+            let net = await SystemMonitorService.shared.fetchNetworkStats()
             let hw = await SystemMonitorService.shared.fetchHardwareInfo()
             let procs = await SystemMonitorService.shared.fetchRunningProcesses(forceRefresh: fullProcessRefresh)
             
@@ -206,6 +208,7 @@ public final class AppState: ObservableObject {
                 self.cpuStats = cpu
                 self.diskStats = disk
                 self.batteryStats = batt
+                self.networkStats = net
                 self.hardwareInfo = hw
                 self.runningProcesses = procs
                 

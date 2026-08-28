@@ -139,3 +139,21 @@ public struct HardwareInfo: Sendable, Equatable {
     public var serialNumber: String = ""
     public var memorySizeFormatted: String = ""
 }
+
+/// Real-time Network Throughput & Interface Statistics
+public struct NetworkStats: Sendable, Equatable {
+    public var downloadBytesPerSec: Double = 0.0
+    public var uploadBytesPerSec: Double = 0.0
+    public var totalDownloadBytes: UInt64 = 0
+    public var totalUploadBytes: UInt64 = 0
+    public var activeInterfaceName: String = "en0"
+    public var localIPAddress: String = "127.0.0.1"
+    
+    public var downloadSpeedFormatted: String {
+        ByteFormatter.formatSpeed(bytesPerSec: downloadBytesPerSec)
+    }
+    
+    public var uploadSpeedFormatted: String {
+        ByteFormatter.formatSpeed(bytesPerSec: uploadBytesPerSec)
+    }
+}

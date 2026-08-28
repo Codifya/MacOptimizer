@@ -31,6 +31,9 @@ public struct DashboardView: View {
                     BatteryAnalyticsCard(stats: appState.batteryStats)
                 }
                 
+                // Real-Time Network Throughput & Bandwidth
+                NetworkBandwidthCard(stats: appState.networkStats)
+                
                 // Bottom Section: Top Processes & Quick Maintenance (Responsive 1 or 2 columns)
                 bottomProcessesAndUtilitiesSection
             }

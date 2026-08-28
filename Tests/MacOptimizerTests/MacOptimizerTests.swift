@@ -675,4 +675,17 @@ final class MacOptimizerTests: XCTestCase {
         stats.temperatureCelsius = 42.0
         XCTAssertTrue(stats.isOverheating)
     }
+    
+    // MARK: - 21. Network Throughput Telemetry Tests
+    func testNetworkStatsThroughputFormatting() {
+        var stats = NetworkStats()
+        stats.downloadBytesPerSec = 15_728_640.0 // ~15 MB/s
+        stats.uploadBytesPerSec = 2_097_152.0    // ~2 MB/s
+        
+        XCTAssertEqual(stats.downloadSpeedFormatted, "15.0 MB/s")
+        XCTAssertEqual(stats.uploadSpeedFormatted, "2.0 MB/s")
+        
+        stats.downloadBytesPerSec = 512.0
+        XCTAssertEqual(stats.downloadSpeedFormatted, "512 B/s")
+    }
 }

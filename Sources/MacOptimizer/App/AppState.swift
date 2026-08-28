@@ -82,6 +82,7 @@ public final class AppState: ObservableObject {
     
     // Junk Cleaner State
     @Published public var junkGroups: [JunkCategoryGroup] = []
+    @Published public var activeCleaningPlan: CleaningPlan? = nil
     @Published public var isScanningJunk = false
     @Published public var isCleaningJunk = false
     @Published public var junkScanProgress: Double = 0.0
@@ -436,6 +437,50 @@ public final class AppState: ObservableObject {
                 self.junkGroups = groups
                 self.isScanningJunk = false
                 self.junkStatusMessage = "Tarama tamamlandı."
+            }
+        }
+    }
+    
+    // MARK: - Dry-Run Cleaning Plan & Execution
+    public func prepareCleaningPlan() {
+        Task {
+            let plan = await JunkCleanerService.shared.generateCleaningPlan(from: self.junkGroups)
+            await MainActor.run {
+                self.activeCleaningPlan = plan
+            }
+        }
+    }
+    
+    public func executeActiveCleaningPlan() {
+        guard let plan = activeCleaningPlan, !isCleaningJunk else { return }
+        isCleaningJunk = true
+        activeCleaningPlan = nil
+        
+        Task {
+            let result = await JunkCleanerService.shared.executeCleaningPlan(plan) { [weak self] name, progress in
+                Task { @MainActor [weak self] in
+                    self?.junkStatusMessage = "\(name) temizleniyor..."
+                    self?.junkScanProgress = progress
+                }
+            }
+            
+            await MainActor.run {
+                self.isCleaningJunk = false
+                self.refreshMetrics()
+                self.scanJunk()
+                
+                let report = OptimizationReport(
+                    title: "Gereksiz Dosya Temizliği (Dry-Run Onaylı)",
+                    freedMemoryBytes: 0,
+                    freedDiskBytes: result.totalFreedBytes,
+                    details: [
+                        "\(result.cleanedItemCount) öğe başarıyla temizlendi.",
+                        result.failedItemCount > 0 ? "\(result.failedItemCount) öğe atlandı." : "Hata oluşmadı."
+                    ],
+                    durationSeconds: result.durationSeconds
+                )
+                self.addReport(report)
+                self.showNotification(message: "\(ByteFormatter.format(result.totalFreedBytes)) gereksiz dosya başarıyla temizlendi.")
             }
         }
     }

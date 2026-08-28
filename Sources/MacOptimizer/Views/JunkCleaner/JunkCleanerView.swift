@@ -35,15 +35,17 @@ public struct JunkCleanerView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-        .alert(isPresented: $showConfirmClean) {
-            Alert(
-                title: Text("Seçili Dosyaları Temizle"),
-                message: Text("\(selectedItemCount) adet öğe (\(ByteFormatter.format(selectedJunkBytes))) silinecektir. Devam etmek istiyor musunuz?"),
-                primaryButton: .destructive(Text("Temizle")) {
-                    appState.cleanSelectedJunk()
-                },
-                secondaryButton: .cancel(Text("Vazgeç"))
-            )
+        .sheet(isPresented: Binding(
+            get: { appState.activeCleaningPlan != nil },
+            set: { if !$0 { appState.activeCleaningPlan = nil } }
+        )) {
+            if let plan = appState.activeCleaningPlan {
+                CleaningPlanPreviewModalView(
+                    appState: appState,
+                    plan: plan,
+                    onDismiss: { appState.activeCleaningPlan = nil }
+                )
+            }
         }
     }
     
@@ -117,7 +119,7 @@ public struct JunkCleanerView: View {
                             gradient: SystemTheme.junkGradient,
                             isLoading: appState.isCleaningJunk
                         ) {
-                            showConfirmClean = true
+                            appState.prepareCleaningPlan()
                         }
                     }
                 }

@@ -1,5 +1,24 @@
 import Foundation
 
+/// Defines the selected AI Provider type
+public enum AIProviderType: String, Codable, Sendable, CaseIterable, Identifiable {
+    case localHeuristics = "local_heuristics"
+    case ollama = "ollama"
+    case nvidiaNIM = "nvidia_nim"
+    case customOpenAI = "custom_openai"
+    
+    public var id: String { rawValue }
+    
+    public var displayName: String {
+        switch self {
+        case .localHeuristics: return "🛡️ Yerel Kural Motoru (100% Çevrimdışı & Güvenli)"
+        case .ollama: return "🦙 Yerel Ollama (Cihaz Üzerinde LLM)"
+        case .nvidiaNIM: return "⚡ NVIDIA NIM (Bulut Llama 3.3 / DeepSeek R1)"
+        case .customOpenAI: return "🌐 Özel / OpenAI Uyumlu Uç Nokta"
+        }
+    }
+}
+
 /// NVIDIA NIM Model definition and settings
 public struct NIMModelOption: Identifiable, Hashable, Codable, Sendable {
     public let id: String
@@ -65,8 +84,9 @@ public enum NIMAvailableModels {
     ]
 }
 
-/// Configuration settings for NVIDIA NIM API integration
+/// Configuration settings for AI providers & NVIDIA NIM API integration
 public struct NIMConfig: Codable, Sendable, Equatable {
+    public var providerType: AIProviderType
     public var apiKey: String
     public var baseURL: String
     public var selectedModel: String
@@ -77,6 +97,7 @@ public struct NIMConfig: Codable, Sendable, Equatable {
     public var cachedModels: [NIMModelOption]
     
     public init(
+        providerType: AIProviderType = .localHeuristics,
         apiKey: String = "",
         baseURL: String = "https://integrate.api.nvidia.com/v1",
         selectedModel: String = "meta/llama-3.3-70b-instruct",
@@ -86,6 +107,7 @@ public struct NIMConfig: Codable, Sendable, Equatable {
         isManualEntry: Bool = false,
         cachedModels: [NIMModelOption] = []
     ) {
+        self.providerType = providerType
         self.apiKey = apiKey
         self.baseURL = baseURL
         self.selectedModel = selectedModel

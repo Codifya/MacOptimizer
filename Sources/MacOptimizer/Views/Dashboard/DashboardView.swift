@@ -20,6 +20,9 @@ public struct DashboardView: View {
                 // Real-Time Gauges Grid (RAM, CPU, Disk, Battery - Adaptive 2 to 4 columns)
                 gaugesRow
                 
+                // Live Observability Telemetry History Chart (Swift Charts)
+                TelemetryHistoryCard(appState: appState)
+                
                 // Segmented Memory Breakdown
                 MemoryBreakdownCard(stats: appState.memoryStats)
                 

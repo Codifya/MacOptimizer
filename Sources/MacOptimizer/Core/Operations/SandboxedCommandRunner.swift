@@ -6,6 +6,8 @@ public enum ApprovedExecutable: String, Sendable, CaseIterable {
     case killall     = "/usr/bin/killall"
     case mdutil      = "/usr/bin/mdutil"
     case qlmanage    = "/usr/bin/qlmanage"
+    case lsregister  = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+    case atsutil     = "/usr/bin/atsutil"
 }
 
 /// Execution result for sandboxed commands.

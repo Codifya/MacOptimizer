@@ -1,23 +1,44 @@
 import Foundation
 import AppKit
 
-/// Maintenance utilities for macOS system health, network cache, quicklook cache, and smart optimization
+/// Maintenance utilities for macOS system health, network cache, quicklook cache, LaunchServices, Spotlight, and smart optimization.
 public actor MaintenanceService {
     public static let shared = MaintenanceService()
     
     public init() {}
     
-    /// Flushes the macOS DNS cache
+    /// Flushes the macOS DNS & mDNSResponder cache
     public func flushDNSCache() async -> (success: Bool, message: String) {
-        _ = await SystemCommandRunner.run(executable: "/usr/bin/dscacheutil", arguments: ["-flushcache"])
-        _ = await SystemCommandRunner.run(executable: "/usr/bin/killall", arguments: ["-HUP", "mDNSResponder"])
-        return (true, "DNS önbelleği başarıyla temizlendi ve ağ yanıt süreleri yenilendi.")
+        _ = await SandboxedCommandRunner.run(executable: .dscacheutil, arguments: ["-flushcache"])
+        _ = await SandboxedCommandRunner.run(executable: .killall, arguments: ["-HUP", "mDNSResponder"])
+        return (true, "DNS ve mDNSResponder önbelleği başarıyla temizlendi.")
     }
     
     /// Resets the macOS QuickLook thumbnail cache
     public func resetQuickLookCache() async -> (success: Bool, message: String) {
-        let result = await SystemCommandRunner.run(executable: "/usr/bin/qlmanage", arguments: ["-r", "cache"])
+        let result = await SandboxedCommandRunner.run(executable: .qlmanage, arguments: ["-r", "cache"])
         return (result.isSuccess, "QuickLook önizleme önbelleği sıfırlandı.")
+    }
+    
+    /// Rebuilds macOS LaunchServices database to fix broken file associations and duplicate app menu entries
+    public func rebuildLaunchServices() async -> (success: Bool, message: String) {
+        let result = await SandboxedCommandRunner.run(
+            executable: .lsregister,
+            arguments: ["-kill", "-r", "-domain", "local", "-domain", "system", "-domain", "user"]
+        )
+        return (result.isSuccess, "LaunchServices veri tabanı başarıyla yeniden inşa edildi.")
+    }
+    
+    /// Restarts the macOS CoreAudio background daemon to fix sound glitches and frozen audio devices
+    public func restartAudioDaemon() async -> (success: Bool, message: String) {
+        let result = await SandboxedCommandRunner.run(executable: .killall, arguments: ["-9", "coreaudiod"])
+        return (result.isSuccess, "CoreAudio ses sistemi yeniden başlatıldı.")
+    }
+    
+    /// Re-indexes Spotlight search metadata for primary volume
+    public func rebuildSpotlightIndex() async -> (success: Bool, message: String) {
+        let result = await SandboxedCommandRunner.run(executable: .mdutil, arguments: ["-E", "/"])
+        return (result.isSuccess, "Spotlight arama dizini sıfırlandı ve yeniden indeksleme başlatıldı.")
     }
     
     /// Clears the system clipboard history

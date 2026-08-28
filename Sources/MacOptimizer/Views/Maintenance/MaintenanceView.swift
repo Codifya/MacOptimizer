@@ -14,8 +14,9 @@ public struct MaintenanceView: View {
                 
                 // Utilities Grid (Responsive Adaptive Columns)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 16)], spacing: 16) {
+                    // 1. DNS & Network Resolver
                     MaintenanceToolCard(
-                        title: "DNS Önbelleğini Sıfırla",
+                        title: "DNS & Ağ Çözümleyiciyi Sıfırla",
                         description: "Ağ ve DNS çözümleme gecikmelerini giderir, web sitelerinin en güncel IP adresleriyle yüklenmesini sağlar.",
                         icon: "network",
                         color: .blue,
@@ -27,6 +28,21 @@ public struct MaintenanceView: View {
                         }
                     }
                     
+                    // 2. LaunchServices Rebuild
+                    MaintenanceToolCard(
+                        title: "LaunchServices Veri Tabanını Onar",
+                        description: "Birlikte Aç (Open With) menüsündeki yinelenen veya bozuk uygulama simgelerini ve dosya ilişkilerini onarır.",
+                        icon: "app.badge.checkmark",
+                        color: .indigo,
+                        isLoading: runningTaskName == "launchservices"
+                    ) {
+                        runTask(id: "launchservices") {
+                            let res = await MaintenanceService.shared.rebuildLaunchServices()
+                            appState.showNotification(message: res.message)
+                        }
+                    }
+                    
+                    // 3. QuickLook Cache Reset
                     MaintenanceToolCard(
                         title: "QuickLook Önbelleğini Sıfırla",
                         description: "Finder dosya önizlemelerinde (Space tuşu) oluşan donma veya hatalı küçük resim önbelleklerini onarır.",
@@ -40,6 +56,46 @@ public struct MaintenanceView: View {
                         }
                     }
                     
+                    // 4. CoreAudio Restart
+                    MaintenanceToolCard(
+                        title: "CoreAudio Ses Sistemini Yenile",
+                        description: "Kilitlenmiş mikrofon/kulaklık bağlantılarını, ses cızırtılarını ve yanıt vermeyen ses aygıtlarını sıfırlar.",
+                        icon: "speaker.wave.2.fill",
+                        color: .orange,
+                        isLoading: runningTaskName == "audio"
+                    ) {
+                        runTask(id: "audio") {
+                            let res = await MaintenanceService.shared.restartAudioDaemon()
+                            appState.showNotification(message: res.message)
+                        }
+                    }
+                    
+                    // 5. RAM Cache Purge
+                    MaintenanceToolCard(
+                        title: "RAM Önbelleğini Boşalt",
+                        description: "macOS sanal bellek sayfalarını ve pasif uygulama kalıntılarını anında serbest bırakır.",
+                        icon: "memorychip.fill",
+                        color: .green,
+                        isLoading: appState.isPurgingMemory
+                    ) {
+                        appState.purgeRAM()
+                    }
+                    
+                    // 6. Spotlight Rebuild
+                    MaintenanceToolCard(
+                        title: "Spotlight İndeksini Yenile",
+                        description: "Dosya arama sistemini sıfırlayarak Spotlight indeksini baştan optimize eder.",
+                        icon: "magnifyingglass",
+                        color: .yellow,
+                        isLoading: runningTaskName == "spotlight"
+                    ) {
+                        runTask(id: "spotlight") {
+                            let res = await MaintenanceService.shared.rebuildSpotlightIndex()
+                            appState.showNotification(message: res.message)
+                        }
+                    }
+                    
+                    // 7. Clipboard Clear
                     MaintenanceToolCard(
                         title: "Pano Geçmişini Temizle",
                         description: "Kopyalanmış hassas metin, şifre ve görselleri sistem panosundan (Clipboard) kalıcı olarak siler.",
@@ -51,29 +107,7 @@ public struct MaintenanceView: View {
                         appState.showNotification(message: res.message)
                     }
                     
-                    MaintenanceToolCard(
-                        title: "RAM Önbelleğini Boşalt",
-                        description: "macOS sanal bellek sayfalarını ve pasif uygulama kalıntılarını anında serbest bırakır.",
-                        icon: "memorychip.fill",
-                        color: .green,
-                        isLoading: appState.isPurgingMemory
-                    ) {
-                        appState.purgeRAM()
-                    }
-                    
-                    MaintenanceToolCard(
-                        title: "Spotlight İndeksini Yenile",
-                        description: "Dosya arama sistemini sıfırlayarak Spotlight indeksini baştan optimize eder.",
-                        icon: "magnifyingglass",
-                        color: .orange,
-                        isLoading: runningTaskName == "spotlight"
-                    ) {
-                        runTask(id: "spotlight") {
-                            _ = await SystemCommandRunner.run(executable: "/usr/bin/mdutil", arguments: ["-E", "/"])
-                            appState.showNotification(message: "Spotlight arama indeksi yenilenmeye başladı.")
-                        }
-                    }
-                    
+                    // 8. Empty Trash
                     MaintenanceToolCard(
                         title: "Çöp Kutusunu Boşalt",
                         description: "Kullanıcı çöp sepetinde biriken tüm dosyaları güvenli ve kalıcı şekilde siler.",
@@ -114,7 +148,7 @@ public struct MaintenanceView: View {
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
-                    Text("Sık karşılaşılan macOS performans tıkanıklıklarını, DNS gecikmelerini ve önbellek kilitlenmelerini tek tıkla çözün.")
+                    Text("Sık karşılaşılan macOS performans tıkanıklıklarını, DNS gecikmelerini, ses kilitlenmelerini ve önbellek hatalarını tek tıkla çözün.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)

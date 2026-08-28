@@ -590,4 +590,30 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "clean", "--dry-run"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "purge-ram"]))
     }
+    
+    // MARK: - 17. Maintenance Service & App Uninstaller Tests
+    func testMaintenanceServiceMethods() async {
+        let dns = await MaintenanceService.shared.flushDNSCache()
+        XCTAssertTrue(dns.success)
+        
+        let ql = await MaintenanceService.shared.resetQuickLookCache()
+        XCTAssertTrue(ql.success)
+        
+        let clip = await MaintenanceService.shared.clearClipboard()
+        XCTAssertTrue(clip.success)
+    }
+    
+    func testAppUninstallerProtectedAppsRefused() async {
+        let safari = InstalledApp(
+            name: "Safari",
+            bundleIdentifier: "com.apple.Safari",
+            path: "/System/Applications/Safari.app",
+            version: "17.0",
+            sizeBytes: 50000000,
+            isSystemApp: true
+        )
+        
+        let items = await AppUninstallerService.shared.findAssociatedFiles(for: safari)
+        XCTAssertTrue(items.isEmpty, "System apps must never have uninstallation files discovered")
+    }
 }

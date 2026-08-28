@@ -123,7 +123,7 @@ public actor AppUninstallerService {
         return items
     }
     
-    /// Uninstalls and removes selected files safely using SafetyGuard
+    /// Uninstalls and removes selected files safely using SafeOperationExecutor
     public func uninstall(files: [AppFileItem]) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
         var totalFreed: Int64 = 0
         var deleted = 0
@@ -132,9 +132,13 @@ public actor AppUninstallerService {
         for file in files where file.isSelected {
             let url = URL(fileURLWithPath: file.path)
             do {
-                try SafetyGuard.safelyRemoveItem(at: url)
-                totalFreed += file.sizeBytes
-                deleted += 1
+                let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: true)
+                if result.success {
+                    totalFreed += (result.bytesFreed > 0 ? result.bytesFreed : file.sizeBytes)
+                    deleted += 1
+                } else {
+                    failed += 1
+                }
             } catch {
                 failed += 1
             }

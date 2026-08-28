@@ -204,7 +204,10 @@ public actor JunkCleanerService {
             (".cargo/registry/cache", "Rust Cargo Önbelleği", "Cargo crates önbellek dosyaları"),
             ("Library/Caches/CocoaPods", "CocoaPods Önbelleği", "iOS Pods indirme önbellekleri"),
             (".gradle/caches", "Gradle Önbelleği", "Android ve Java derleme önbellekleri"),
-            (".cache/pip", "Python pip Önbelleği", "Python paket indirme önbellekleri")
+            (".cache/pip", "Python pip Önbelleği", "Python paket indirme önbellekleri"),
+            ("Library/Caches/Homebrew", "Homebrew İndirme Önbelleği", "İndirilen formül ve bottle paketleri"),
+            ("Library/Caches/uv", "Python UV Önbelleği", "UV paket yöneticisi önbelleği"),
+            ("Library/Caches/pypoetry", "Python Poetry Önbelleği", "Poetry sanal ortam ve paket havuzu")
         ]
         
         for target in devTargets {

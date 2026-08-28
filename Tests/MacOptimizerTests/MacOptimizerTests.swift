@@ -572,4 +572,22 @@ final class MacOptimizerTests: XCTestCase {
             XCTAssertFalse(alerts.contains(where: { $0.title.contains("WindowServer") }))
         }
     }
+    
+    // MARK: - 16. Developer Junk Cleaner & CLI Runner Tests
+    func testDeveloperCachesScanning() async {
+        let items = await JunkCleanerService.shared.scanCategory(.developerCache)
+        // If developer tools exist on machine, items will be populated; function should not crash or throw
+        for item in items {
+            XCTAssertEqual(item.category, .developerCache)
+            XCTAssertFalse(item.path.isEmpty)
+        }
+    }
+    
+    func testCLICommandRunnerPSNFiltering() {
+        XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer"]))
+        XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-psn_0_123456"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "status"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "clean", "--dry-run"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "purge-ram"]))
+    }
 }

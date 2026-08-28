@@ -2,6 +2,17 @@ import SwiftUI
 import AppKit
 
 @main
+struct MacOptimizerMain {
+    static func main() async {
+        if CLICommandRunner.shouldHandleCLI() {
+            await CLICommandRunner.runCLI()
+            exit(0)
+        } else {
+            MacOptimizerApp.main()
+        }
+    }
+}
+
 struct MacOptimizerApp: App {
     @StateObject private var appState = AppState.shared
     @AppStorage("showMenuBarExtra") private var showMenuBarExtra = true

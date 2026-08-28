@@ -659,4 +659,20 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(group.original.isSelectedForDeletion)
         XCTAssertTrue(group.duplicates[0].isSelectedForDeletion)
     }
+    
+    // MARK: - 20. Battery & Power Telemetry Tests
+    func testBatteryStatsMetrics() {
+        var stats = BatteryStats()
+        stats.isPresent = true
+        stats.percentage = 95
+        stats.cycleCount = 142
+        stats.healthPercentage = 98
+        stats.temperatureCelsius = 29.5
+        stats.condition = "Normal"
+        
+        XCTAssertFalse(stats.isOverheating)
+        
+        stats.temperatureCelsius = 42.0
+        XCTAssertTrue(stats.isOverheating)
+    }
 }

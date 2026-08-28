@@ -119,8 +119,14 @@ public struct BatteryStats: Sendable, Equatable {
     public var cycleCount: Int = 0
     public var healthPercentage: Int = 100
     public var condition: String = "Normal"
+    public var temperatureCelsius: Double = 28.0
+    public var designCapacityMah: Int = 0
     public var timeRemainingFormatted: String = ""
     public var powerSource: String = "AC Gücü"
+    
+    public var isOverheating: Bool {
+        temperatureCelsius > 38.0
+    }
 }
 
 /// General Hardware information

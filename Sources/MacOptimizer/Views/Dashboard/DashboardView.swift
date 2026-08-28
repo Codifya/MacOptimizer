@@ -26,6 +26,11 @@ public struct DashboardView: View {
                 // Segmented Memory Breakdown
                 MemoryBreakdownCard(stats: appState.memoryStats)
                 
+                // Battery Health & Thermal Analytics
+                if appState.batteryStats.isPresent {
+                    BatteryAnalyticsCard(stats: appState.batteryStats)
+                }
+                
                 // Bottom Section: Top Processes & Quick Maintenance (Responsive 1 or 2 columns)
                 bottomProcessesAndUtilitiesSection
             }

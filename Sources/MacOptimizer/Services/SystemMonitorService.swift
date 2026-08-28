@@ -207,6 +207,40 @@ public actor SystemMonitorService {
             break
         }
         
+        // IOKit AppleSmartBattery Inspection
+        let matching = IOServiceMatching("AppleSmartBattery")
+        var iterator: io_iterator_t = 0
+        if IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == KERN_SUCCESS {
+            let service = IOIteratorNext(iterator)
+            if service != 0 {
+                var propsRef: Unmanaged<CFMutableDictionary>?
+                if IORegistryEntryCreateCFProperties(service, &propsRef, kCFAllocatorDefault, 0) == KERN_SUCCESS,
+                   let props = propsRef?.takeRetainedValue() as? [String: Any] {
+                    if let cycles = props["CycleCount"] as? Int {
+                        stats.cycleCount = cycles
+                    }
+                    if let temp = props["Temperature"] as? Int {
+                        let tempC = (temp > 1000) ? (Double(temp) / 100.0) : (Double(temp) / 10.0 - 273.15)
+                        stats.temperatureCelsius = Swift.max(0.0, Swift.min(100.0, tempC))
+                    }
+                    if let maxCap = props["MaxCapacity"] as? Int,
+                       let designCap = props["DesignCapacity"] as? Int, designCap > 0 {
+                        stats.designCapacityMah = designCap
+                        stats.healthPercentage = Swift.min(100, Int((Double(maxCap) / Double(designCap)) * 100.0))
+                    }
+                    if let isPermanentFail = props["PermanentFailureStatus"] as? Int, isPermanentFail != 0 {
+                        stats.condition = "Servis Öneriliyor"
+                    } else if stats.healthPercentage < 80 {
+                        stats.condition = "Pil Sağlığı Zayıf"
+                    } else {
+                        stats.condition = "Normal"
+                    }
+                }
+                IOObjectRelease(service)
+            }
+            IOObjectRelease(iterator)
+        }
+        
         return stats
     }
     

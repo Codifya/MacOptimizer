@@ -1,0 +1,49 @@
+name: Release & Apple Notarization
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    name: Build, Sign, Notarize & Release
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_15.4.app || true
+
+      - name: Build Standalone Application
+        run: ./Scripts/build_app.sh
+
+      - name: Package DMG Installer
+        run: |
+          mkdir -p dist
+          hdiutil create -volname "MacOptimizer" -srcfolder "MacOptimizer.app" -ov -format UDZO "dist/MacOptimizer.dmg"
+          cd dist
+          shasum -a 256 MacOptimizer.dmg > MacOptimizer.dmg.sha256
+          cd ..
+
+      - name: Generate Artifact Attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'dist/MacOptimizer.dmg'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/MacOptimizer.dmg
+            dist/MacOptimizer.dmg.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false

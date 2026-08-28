@@ -1,0 +1,15 @@
+title = "Gitleaks Configuration for MacOptimizer"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+  '''Tests/.*''',
+  '''\.github/.*'''
+]
+regexes = [
+  '''nvapi-test-token-123456''',
+  '''test_unit_secret_key'''
+]

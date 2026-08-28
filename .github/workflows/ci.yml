@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (macOS)
+    runs-on: macos-14
+    strategy:
+      matrix:
+        xcode: ['15.4', '16.0']
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -switch /Applications/Xcode_${{ matrix.xcode }}.app || true
+
+      - name: Verify Swift Version
+        run: swift --version
+
+      - name: Build Package
+        run: swift build -v
+
+      - name: Run Test Suite
+        run: swift test --enable-code-coverage
+
+      - name: Build Release App Bundle
+        run: ./Scripts/build_app.sh

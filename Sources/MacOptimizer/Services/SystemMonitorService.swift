@@ -60,6 +60,15 @@ public actor SystemMonitorService {
             }
         }
         
+        // Read Swap Memory via sysctl vm.swapusage
+        var swapUsage = xsw_usage()
+        var swapSize = MemoryLayout<xsw_usage>.size
+        if sysctlbyname("vm.swapusage", &swapUsage, &swapSize, nil, 0) == 0 {
+            stats.swapTotalBytes = swapUsage.xsu_total
+            stats.swapUsedBytes = swapUsage.xsu_used
+            stats.swapFreeBytes = swapUsage.xsu_avail
+        }
+        
         return stats
     }
     
@@ -99,6 +108,14 @@ public actor SystemMonitorService {
         cpuStats.physicalCores = ProcessInfo.processInfo.activeProcessorCount
         cpuStats.logicalCores = ProcessInfo.processInfo.processorCount
         cpuStats.processorName = getProcessorName()
+        
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: cpuStats.thermalState = .nominal
+        case .fair: cpuStats.thermalState = .fair
+        case .serious: cpuStats.thermalState = .serious
+        case .critical: cpuStats.thermalState = .critical
+        @unknown default: cpuStats.thermalState = .nominal
+        }
         
         return cpuStats
     }

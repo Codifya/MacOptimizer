@@ -33,6 +33,32 @@ final class SQLiteConnection: @unchecked Sendable {
     }
 }
 
+/// Point model for telemetry queries
+public struct TelemetryHistoryPoint: Identifiable, Sendable, Equatable {
+    public let id: Int64
+    public let timestamp: Date
+    public let cpuUsage: Double
+    public let ramUsedBytes: UInt64
+    public let ramPressureLevel: Int
+    public let diskUsedBytes: Int64
+    
+    public init(
+        id: Int64 = 0,
+        timestamp: Date,
+        cpuUsage: Double,
+        ramUsedBytes: UInt64,
+        ramPressureLevel: Int,
+        diskUsedBytes: Int64
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.cpuUsage = cpuUsage
+        self.ramUsedBytes = ramUsedBytes
+        self.ramPressureLevel = ramPressureLevel
+        self.diskUsedBytes = diskUsedBytes
+    }
+}
+
 /// High-performance time-series telemetry storage with automatic downsampling using SQLite.
 public actor TelemetryStore {
     public static let shared = TelemetryStore()
@@ -74,10 +100,62 @@ public actor TelemetryStore {
         }
     }
     
-    /// Cleans up raw samples older than 24 hours to keep the database size minimal.
+    /// Fetches historical telemetry points within the given hour range, downsampling if needed.
+    public func fetchHistory(hours: Int, maxPoints: Int = 60) -> [TelemetryHistoryPoint] {
+        guard let db = connection.db else { return [] }
+        
+        let cutoff = Date().addingTimeInterval(-Double(hours * 3600)).timeIntervalSince1970
+        let querySQL = """
+        SELECT id, timestamp, cpu_usage, ram_used_bytes, ram_pressure, disk_used_bytes
+        FROM telemetry_raw
+        WHERE timestamp >= ?
+        ORDER BY timestamp ASC;
+        """
+        
+        var stmt: OpaquePointer?
+        var rawPoints: [TelemetryHistoryPoint] = []
+        
+        if sqlite3_prepare_v2(db, querySQL, -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_double(stmt, 1, cutoff)
+            
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let id = sqlite3_column_int64(stmt, 0)
+                let ts = sqlite3_column_double(stmt, 1)
+                let cpu = sqlite3_column_double(stmt, 2)
+                let ramBytes = UInt64(max(0, sqlite3_column_int64(stmt, 3)))
+                let pressure = Int(sqlite3_column_int(stmt, 4))
+                let diskBytes = sqlite3_column_int64(stmt, 5)
+                
+                rawPoints.append(TelemetryHistoryPoint(
+                    id: id,
+                    timestamp: Date(timeIntervalSince1970: ts),
+                    cpuUsage: cpu,
+                    ramUsedBytes: ramBytes,
+                    ramPressureLevel: pressure,
+                    diskUsedBytes: diskBytes
+                ))
+            }
+            sqlite3_finalize(stmt)
+        }
+        
+        guard rawPoints.count > maxPoints else { return rawPoints }
+        
+        // Downsample evenly to maxPoints
+        let stride = Double(rawPoints.count) / Double(maxPoints)
+        var downsampled: [TelemetryHistoryPoint] = []
+        for i in 0..<maxPoints {
+            let index = Int(Double(i) * stride)
+            if index < rawPoints.count {
+                downsampled.append(rawPoints[index])
+            }
+        }
+        return downsampled
+    }
+    
+    /// Cleans up raw samples older than 48 hours to keep the database size minimal.
     public func purgeOldRawSamples() {
         guard let db = connection.db else { return }
-        let cutoff = Date().addingTimeInterval(-86400).timeIntervalSince1970
+        let cutoff = Date().addingTimeInterval(-172800).timeIntervalSince1970
         let deleteSQL = "DELETE FROM telemetry_raw WHERE timestamp < ?;"
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nil) == SQLITE_OK {

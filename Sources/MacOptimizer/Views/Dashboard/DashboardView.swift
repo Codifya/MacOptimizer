@@ -51,8 +51,10 @@ public struct DashboardView: View {
                     
                     MetricBadge(text: appState.hardwareInfo.chipName, colorName: "blue")
                     
+                    MetricBadge(text: appState.cpuStats.thermalState.rawValue, colorName: appState.cpuStats.thermalState.colorName)
+                    
                     if appState.nimConfig.isEnabled {
-                        MetricBadge(text: "NVIDIA NIM Aktif", colorName: "green")
+                        MetricBadge(text: appState.nimConfig.providerType.displayName, colorName: "purple")
                     }
                 }
                 
@@ -225,7 +227,7 @@ public struct DashboardView: View {
                     percentage: appState.memoryStats.usedPercentage,
                     title: "RAM Bellek",
                     valueText: String(format: "%.0f%%", appState.memoryStats.usedPercentage * 100),
-                    subText: "\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(appState.memoryStats.totalBytes))",
+                    subText: appState.memoryStats.swapUsedBytes > 0 ? "Swap: \(ByteFormatter.formatMemory(appState.memoryStats.swapUsedBytes))" : "\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(appState.memoryStats.totalBytes))",
                     gradient: SystemTheme.memoryGradient,
                     size: 115
                 )
@@ -238,7 +240,7 @@ public struct DashboardView: View {
                     percentage: appState.cpuStats.totalUsage / 100.0,
                     title: "İşlemci (CPU)",
                     valueText: String(format: "%.1f%%", appState.cpuStats.totalUsage),
-                    subText: "\(appState.cpuStats.physicalCores) Çekirdek Aktif",
+                    subText: "\(appState.cpuStats.physicalCores) Çekirdek • \(appState.cpuStats.thermalState.rawValue)",
                     gradient: SystemTheme.primaryGradient,
                     size: 115
                 )

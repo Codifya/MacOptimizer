@@ -12,6 +12,11 @@ public struct MemoryStats: Sendable, Equatable {
     public var memoryPressure: Double = 0.0 // 0.0 to 1.0
     public var pressureLevel: MemoryPressureLevel = .normal
     
+    // Swap memory
+    public var swapTotalBytes: UInt64 = 0
+    public var swapUsedBytes: UInt64 = 0
+    public var swapFreeBytes: UInt64 = 0
+    
     public enum MemoryPressureLevel: String, Sendable, Equatable {
         case normal = "Normal"
         case warning = "Uyarı"
@@ -49,7 +54,7 @@ public struct MemoryStats: Sendable, Equatable {
     }
 }
 
-/// CPU usage statistics
+/// CPU usage and thermal throttling statistics
 public struct CPUStats: Sendable, Equatable {
     public var systemUsage: Double = 0.0 // 0.0 - 100.0
     public var userUsage: Double = 0.0   // 0.0 - 100.0
@@ -58,6 +63,32 @@ public struct CPUStats: Sendable, Equatable {
     public var physicalCores: Int = 0
     public var logicalCores: Int = 0
     public var processorName: String = ""
+    public var thermalState: ThermalState = .nominal
+    
+    public enum ThermalState: String, Sendable, Equatable, CaseIterable {
+        case nominal = "Normal (Serin)"
+        case fair = "Hafif Isınma"
+        case serious = "Yüksek Sıcaklık (Kısılma Riski)"
+        case critical = "Kritik Sıcaklık (Fanlar Maksimumda)"
+        
+        public var colorName: String {
+            switch self {
+            case .nominal: return "green"
+            case .fair: return "yellow"
+            case .serious: return "orange"
+            case .critical: return "red"
+            }
+        }
+        
+        public var iconName: String {
+            switch self {
+            case .nominal: return "thermometer.low"
+            case .fair: return "thermometer.medium"
+            case .serious: return "thermometer.high"
+            case .critical: return "flame.fill"
+            }
+        }
+    }
 }
 
 /// Disk volume storage statistics

@@ -447,4 +447,52 @@ final class MacOptimizerTests: XCTestCase {
         )
         await store.purgeOldRawSamples()
     }
+    
+    func testTelemetryStoreFetchHistoryAndDownsampling() async {
+        let store = TelemetryStore.shared
+        // Record 15 points
+        for i in 1...15 {
+            await store.record(
+                cpuUsage: Double(i * 5),
+                ramUsedBytes: UInt64(i * 1024 * 1024 * 500),
+                ramPressureLevel: 0,
+                diskUsedBytes: 100000000000
+            )
+        }
+        
+        let history = await store.fetchHistory(hours: 1, maxPoints: 5)
+        XCTAssertFalse(history.isEmpty)
+        XCTAssertLessThanOrEqual(history.count, 5, "Downsampling should limit count to maxPoints")
+    }
+    
+    // MARK: - 14. Thermal State & Swap Metrics Tests
+    func testThermalStateProperties() {
+        for state in CPUStats.ThermalState.allCases {
+            XCTAssertFalse(state.rawValue.isEmpty)
+            XCTAssertFalse(state.colorName.isEmpty)
+            XCTAssertFalse(state.iconName.isEmpty)
+        }
+        
+        var cpu = CPUStats()
+        cpu.thermalState = .nominal
+        XCTAssertEqual(cpu.thermalState.colorName, "green")
+        
+        cpu.thermalState = .critical
+        XCTAssertEqual(cpu.thermalState.colorName, "red")
+    }
+    
+    func testMemoryStatsSwapMetrics() {
+        var mem = MemoryStats()
+        mem.totalBytes = 17179869184 // 16 GB
+        mem.activeBytes = 8589934592 // 8 GB
+        mem.wiredBytes = 2147483648  // 2 GB
+        mem.compressedBytes = 1073741824 // 1 GB
+        mem.swapTotalBytes = 2147483648
+        mem.swapUsedBytes = 536870912
+        mem.swapFreeBytes = 1610612736
+        
+        XCTAssertEqual(mem.actualUsedBytes, 11811160064)
+        XCTAssertEqual(mem.swapTotalBytes, 2147483648)
+        XCTAssertEqual(mem.swapUsedBytes, 536870912)
+    }
 }

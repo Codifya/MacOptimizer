@@ -1,9 +1,13 @@
 import SwiftUI
+import Charts
 
-/// View displaying the history of cleanings, RAM purges, and disk gains.
+/// View displaying optimization reports and SQLite historical telemetry trends over 1h, 24h, and 48h.
 /// Fully responsive across all macOS window dimensions.
 public struct HistoryView: View {
     @ObservedObject var appState: AppState
+    @State private var timeRangeHours: Int = 24
+    @State private var historyPoints: [TelemetryHistoryPoint] = []
+    @State private var isLoadingHistory: Bool = false
     
     private var totalFreedRAM: UInt64 {
         appState.optimizationHistory.reduce(0) { $0 + $1.freedMemoryBytes }
@@ -19,6 +23,9 @@ public struct HistoryView: View {
                 // Summary Hero
                 historyHeaderHero
                 
+                // Historical Telemetry SQLite Chart Card
+                telemetryHistoricalTrendCard
+                
                 // History List
                 if appState.optimizationHistory.isEmpty {
                     emptyHistoryView
@@ -30,6 +37,9 @@ public struct HistoryView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+        .onAppear {
+            loadTelemetryHistory()
+        }
     }
     
     // MARK: - Header Hero
@@ -47,7 +57,7 @@ public struct HistoryView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Optimizasyon Geçmişi & Raporlar")
+                    Text("Optimizasyon Geçmişi & SQLite Telemetri")
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
@@ -89,6 +99,107 @@ public struct HistoryView: View {
                     .padding(.vertical, 6)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+    }
+    
+    // MARK: - SQLite Historical Telemetry Chart
+    private var telemetryHistoricalTrendCard: some View {
+        GlassCard(cornerRadius: 16, padding: 18) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Label("Sistem Performans Geçmişi (SQLite)", systemImage: "waveform.path.ecg")
+                        .font(.system(size: 14, weight: .bold))
+                    
+                    Spacer()
+                    
+                    Picker("Zaman Aralığı", selection: $timeRangeHours) {
+                        Text("Son 1 Saat").tag(1)
+                        Text("Son 24 Saat").tag(24)
+                        Text("Son 48 Saat").tag(48)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 260)
+                    .onChange(of: timeRangeHours) { _, _ in
+                        loadTelemetryHistory()
+                    }
+                }
+                
+                if !historyPoints.isEmpty {
+                    Chart {
+                        ForEach(historyPoints) { point in
+                            LineMark(
+                                x: .value("Zaman", point.timestamp),
+                                y: .value("CPU %", point.cpuUsage),
+                                series: .value("Metrik", "CPU")
+                            )
+                            .foregroundStyle(Color.orange)
+                            .interpolationMethod(.catmullRom)
+                            
+                            LineMark(
+                                x: .value("Zaman", point.timestamp),
+                                y: .value("RAM %", appState.memoryStats.totalBytes > 0 ? (Double(point.ramUsedBytes) / Double(appState.memoryStats.totalBytes)) * 100.0 : 0.0),
+                                series: .value("Metrik", "RAM")
+                            )
+                            .foregroundStyle(Color.blue)
+                            .interpolationMethod(.catmullRom)
+                        }
+                    }
+                    .chartYScale(domain: 0...100)
+                    .chartXAxis {
+                        AxisMarks(values: .automatic(desiredCount: 6)) { _ in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 2]))
+                                .foregroundStyle(Color.secondary.opacity(0.2))
+                            AxisValueLabel(format: .dateTime.hour().minute())
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(values: [0, 25, 50, 75, 100]) { val in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 2]))
+                                .foregroundStyle(Color.secondary.opacity(0.2))
+                            AxisValueLabel {
+                                if let intVal = val.as(Int.self) {
+                                    Text("%\(intVal)").font(.system(size: 9)).foregroundStyle(Color.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 150)
+                } else {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "circle.dotted")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary)
+                            Text("Bu zaman aralığında yeterli SQLite telemetri kaydı bulunamadı.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .frame(height: 120)
+                }
+                
+                HStack(spacing: 16) {
+                    HStack(spacing: 6) {
+                        Circle().fill(Color.orange).frame(width: 8, height: 8)
+                        Text("CPU Kullanımı").font(.system(size: 11, weight: .semibold))
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Circle().fill(Color.blue).frame(width: 8, height: 8)
+                        Text("RAM Kullanımı").font(.system(size: 11, weight: .semibold))
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(historyPoints.count) Veri Noktası (SQLite WAL)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -157,6 +268,15 @@ public struct HistoryView: View {
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+    
+    private func loadTelemetryHistory() {
+        Task {
+            let points = await TelemetryStore.shared.fetchHistory(hours: timeRangeHours, maxPoints: 50)
+            await MainActor.run {
+                self.historyPoints = points
+            }
         }
     }
 }

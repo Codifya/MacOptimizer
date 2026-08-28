@@ -9,6 +9,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     case autonomousGuard = "autonomousGuard"
     case memory = "memory"
     case junkCleaner = "junkCleaner"
+    case duplicateFinder = "duplicateFinder"
     case appManager = "appManager"
     case appUpdates = "appUpdates"
     case startupManager = "startupManager"
@@ -26,6 +27,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
         case .autonomousGuard: return "Otonom Koruma"
         case .memory: return "RAM & Bellek"
         case .junkCleaner: return "Gereksiz Dosyalar"
+        case .duplicateFinder: return "Yinelenen Dosyalar"
         case .appManager: return "Uygulama Yöneticisi"
         case .appUpdates: return "Güncellemeler"
         case .startupManager: return "Başlangıç Öğeleri"
@@ -43,6 +45,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
         case .autonomousGuard: return "shield.checkered"
         case .memory: return "memorychip.fill"
         case .junkCleaner: return "sparkles.square.filled.on.square"
+        case .duplicateFinder: return "doc.on.doc.fill"
         case .appManager: return "square.grid.2x2.fill"
         case .appUpdates: return "arrow.triangle.2.circlepath.circle.fill"
         case .startupManager: return "bolt.horizontal.fill"
@@ -90,6 +93,13 @@ public final class AppState: ObservableObject {
     @Published public var isCleaningJunk = false
     @Published public var junkScanProgress: Double = 0.0
     @Published public var junkStatusMessage: String = ""
+    
+    // Duplicate Finder State
+    @Published public var duplicateGroups: [DuplicateFileGroup] = []
+    @Published public var isScanningDuplicates = false
+    @Published public var isCleaningDuplicates = false
+    @Published public var duplicateScanProgress: Double = 0.0
+    @Published public var duplicateStatusMessage: String = ""
     
     // App Manager & Updates State
     @Published public var installedApps: [InstalledApp] = []
@@ -741,6 +751,46 @@ public final class AppState: ObservableObject {
             await MainActor.run {
                 self.securityReport = report
                 self.isLoadingSecurityAudit = false
+            }
+        }
+    }
+    
+    public func scanDuplicates(targets: [DuplicateFileFinderService.ScanTargetDirectory] = [.downloads, .documents]) {
+        guard !isScanningDuplicates else { return }
+        isScanningDuplicates = true
+        duplicateScanProgress = 0.0
+        duplicateStatusMessage = "Yinelenen dosyalar taranıyor..."
+        
+        Task {
+            let groups = await DuplicateFileFinderService.shared.findDuplicates(
+                in: targets,
+                progressHandler: { msg, progress in
+                    Task { @MainActor in
+                        self.duplicateStatusMessage = msg
+                        self.duplicateScanProgress = progress
+                    }
+                }
+            )
+            
+            await MainActor.run {
+                self.duplicateGroups = groups
+                self.isScanningDuplicates = false
+                self.duplicateScanProgress = 1.0
+                self.duplicateStatusMessage = groups.isEmpty ? "Yinelenen dosya bulunamadı." : "\(groups.count) yinelenen dosya grubu bulundu."
+            }
+        }
+    }
+    
+    public func cleanDuplicates() {
+        guard !isCleaningDuplicates && !duplicateGroups.isEmpty else { return }
+        isCleaningDuplicates = true
+        
+        Task {
+            let result = await DuplicateFileFinderService.shared.cleanDuplicates(self.duplicateGroups)
+            await MainActor.run {
+                self.isCleaningDuplicates = false
+                self.showNotification(message: "\(result.deletedCount) yinelenen dosya Çöp Sepetine taşındı (\(ByteFormatter.format(result.freedBytes)) alan kazanıldı).")
+                self.scanDuplicates()
             }
         }
     }

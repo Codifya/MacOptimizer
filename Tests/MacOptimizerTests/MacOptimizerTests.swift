@@ -626,4 +626,37 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(report.ratingDescription.isEmpty)
         XCTAssertFalse(report.ratingColorName.isEmpty)
     }
+    
+    // MARK: - 19. Duplicate File Finder Models & Algorithm Tests
+    func testDuplicateItemAndGroupModel() {
+        let item1 = DuplicateItem(
+            id: "/tmp/doc1.pdf",
+            path: "/tmp/doc1.pdf",
+            name: "doc1.pdf",
+            sizeBytes: 204800,
+            modificationDate: Date(timeIntervalSince1970: 1000),
+            isSelectedForDeletion: false
+        )
+        
+        let item2 = DuplicateItem(
+            id: "/tmp/doc1_copy.pdf",
+            path: "/tmp/doc1_copy.pdf",
+            name: "doc1_copy.pdf",
+            sizeBytes: 204800,
+            modificationDate: Date(timeIntervalSince1970: 2000),
+            isSelectedForDeletion: true
+        )
+        
+        let group = DuplicateFileGroup(
+            id: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            original: item1,
+            duplicates: [item2],
+            sizePerFile: 204800
+        )
+        
+        XCTAssertEqual(group.totalWastedBytes, 204800)
+        XCTAssertEqual(group.duplicates.count, 1)
+        XCTAssertFalse(group.original.isSelectedForDeletion)
+        XCTAssertTrue(group.duplicates[0].isSelectedForDeletion)
+    }
 }

@@ -108,6 +108,10 @@ public struct MainView: View {
                     NavigationLink(value: NavigationTab.junkCleaner) {
                         Label(NavigationTab.junkCleaner.title, systemImage: NavigationTab.junkCleaner.iconName)
                     }
+                    
+                    NavigationLink(value: NavigationTab.duplicateFinder) {
+                        Label(NavigationTab.duplicateFinder.title, systemImage: NavigationTab.duplicateFinder.iconName)
+                    }
                 }
                 
                 Section(header: Text("UYGULAMALAR").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
@@ -218,6 +222,8 @@ public struct MainView: View {
             MemoryView(appState: appState)
         case .junkCleaner:
             JunkCleanerView(appState: appState)
+        case .duplicateFinder:
+            DuplicateFinderView(appState: appState)
         case .appManager:
             AppManagerView(appState: appState)
         case .appUpdates:

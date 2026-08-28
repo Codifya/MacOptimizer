@@ -495,4 +495,81 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertEqual(mem.swapTotalBytes, 2147483648)
         XCTAssertEqual(mem.swapUsedBytes, 536870912)
     }
+    
+    // MARK: - 15. Autonomous Guard Watchdog Rule Engine Tests
+    func testAutonomousGuardWatchdogRules() async {
+        let guardService = AutonomousGuardService()
+        
+        var mem = MemoryStats()
+        mem.totalBytes = 16000000000
+        mem.activeBytes = 14000000000
+        mem.wiredBytes = 1000000000
+        mem.swapUsedBytes = 3 * 1024 * 1024 * 1024 // 3 GB swap (triggers swap rule)
+        
+        var cpu = CPUStats()
+        cpu.totalUsage = 95.0
+        cpu.thermalState = .serious // Triggers thermal rule
+        
+        var disk = DiskStats()
+        disk.totalBytes = 500000000000
+        disk.freeBytes = 5 * 1024 * 1024 * 1024 // 5 GB free (triggers low disk rule)
+        
+        var config = AutonomousConfig()
+        config.isWatchdogActive = true
+        config.autoPurgeRAMOnSpike = false
+        
+        let alerts = await guardService.evaluateCycle(
+            memory: mem,
+            cpu: cpu,
+            disk: disk,
+            processes: [],
+            config: config
+        )
+        
+        XCTAssertFalse(alerts.isEmpty, "Watchdog should generate alerts for critical metrics")
+        let titles = alerts.map { $0.title }
+        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Swap") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Disk") }))
+    }
+    
+    func testAutonomousGuardSkipsProtectedSystemProcesses() async {
+        let guardService = AutonomousGuardService()
+        
+        var mem = MemoryStats()
+        mem.totalBytes = 16000000000
+        
+        var cpu = CPUStats()
+        cpu.totalUsage = 50.0
+        
+        let disk = DiskStats()
+        
+        var config = AutonomousConfig()
+        config.isWatchdogActive = true
+        config.cpuRunawayThresholdPercent = 80.0
+        
+        let protectedProcess = ProcessInfoModel(
+            pid: 100,
+            name: "WindowServer",
+            path: "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer",
+            memoryBytes: 500000000,
+            cpuPercentage: 99.0,
+            isUserApp: false,
+            bundleIdentifier: nil,
+            isProtected: true
+        )
+        
+        for _ in 1...5 {
+            let alerts = await guardService.evaluateCycle(
+                memory: mem,
+                cpu: cpu,
+                disk: disk,
+                processes: [protectedProcess],
+                config: config
+            )
+            // No kill alert should ever be created for WindowServer
+            XCTAssertFalse(alerts.contains(where: { $0.title.contains("WindowServer") }))
+        }
+    }
 }

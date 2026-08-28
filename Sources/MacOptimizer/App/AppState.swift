@@ -13,6 +13,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     case appUpdates = "appUpdates"
     case startupManager = "startupManager"
     case maintenance = "maintenance"
+    case security = "security"
     case history = "history"
     case settings = "settings"
     
@@ -29,8 +30,9 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
         case .appUpdates: return "Güncellemeler"
         case .startupManager: return "Başlangıç Öğeleri"
         case .maintenance: return "Sistem Bakımı"
+        case .security: return "Güvenlik & Gizlilik"
         case .history: return "Raporlar & Geçmiş"
-        case .settings: return "Ayarlar & NVIDIA NIM"
+        case .settings: return "Ayarlar & Yapay Zeka Hub'ı"
         }
     }
     
@@ -45,6 +47,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
         case .appUpdates: return "arrow.triangle.2.circlepath.circle.fill"
         case .startupManager: return "bolt.horizontal.fill"
         case .maintenance: return "wrench.and.screwdriver.fill"
+        case .security: return "lock.shield.fill"
         case .history: return "clock.arrow.circlepath"
         case .settings: return "gearshape.fill"
         }
@@ -113,6 +116,10 @@ public final class AppState: ObservableObject {
     // Memory Purge State
     @Published public var isPurgingMemory = false
     @Published public var memoryPurgeResult: MemoryOptimizerService.OptimizationResult?
+    
+    // Security & Privacy Audit State
+    @Published public var securityReport: SecurityAuditReport?
+    @Published public var isLoadingSecurityAudit = false
     
     // Alert / Notification State
     @Published public var activeAlertMessage: String?
@@ -723,6 +730,18 @@ public final class AppState: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: "MacOptimizer_AutonomousConfig"),
            let config = try? JSONDecoder().decode(AutonomousConfig.self, from: data) {
             self.autonomousConfig = config
+        }
+    }
+    
+    public func auditSecurityPosture() {
+        guard !isLoadingSecurityAudit else { return }
+        isLoadingSecurityAudit = true
+        Task {
+            let report = await PrivacyAuditService.shared.runSecurityAudit()
+            await MainActor.run {
+                self.securityReport = report
+                self.isLoadingSecurityAudit = false
+            }
         }
     }
     

@@ -8,6 +8,10 @@ public enum ApprovedExecutable: String, Sendable, CaseIterable {
     case qlmanage    = "/usr/bin/qlmanage"
     case lsregister  = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
     case atsutil     = "/usr/bin/atsutil"
+    case launchctl   = "/bin/launchctl"
+    case csrutil     = "/usr/bin/csrutil"
+    case spctl       = "/usr/sbin/spctl"
+    case defaults    = "/usr/bin/defaults"
 }
 
 /// Execution result for sandboxed commands.

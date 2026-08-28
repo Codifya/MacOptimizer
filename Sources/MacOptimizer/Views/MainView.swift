@@ -141,6 +141,10 @@ public struct MainView: View {
                         Label(NavigationTab.maintenance.title, systemImage: NavigationTab.maintenance.iconName)
                     }
                     
+                    NavigationLink(value: NavigationTab.security) {
+                        Label(NavigationTab.security.title, systemImage: NavigationTab.security.iconName)
+                    }
+                    
                     NavigationLink(value: NavigationTab.history) {
                         Label(NavigationTab.history.title, systemImage: NavigationTab.history.iconName)
                     }
@@ -222,6 +226,8 @@ public struct MainView: View {
             StartupManagerView(appState: appState)
         case .maintenance:
             MaintenanceView(appState: appState)
+        case .security:
+            PrivacyAuditView(appState: appState)
         case .history:
             HistoryView(appState: appState)
         case .settings:

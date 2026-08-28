@@ -82,22 +82,22 @@ public actor StartupManagerService {
             return false
         }
         
-        let result = await SystemCommandRunner.run(executable: "/bin/launchctl", arguments: [enable ? "load" : "unload", "-w", item.path], timeoutSeconds: 5.0)
+        let result = await SandboxedCommandRunner.run(
+            executable: .launchctl,
+            arguments: [enable ? "load" : "unload", "-w", item.path],
+            timeoutSeconds: 5.0
+        )
         return result.isSuccess
     }
     
-    /// Removes a launch agent file safely with SafetyGuard validation
+    /// Removes a launch agent file safely with SafeOperationExecutor validation
     public func removeItem(_ item: LaunchAgentItem) async -> Bool {
         guard !item.isProtected && item.itemType == .userAgent else {
             return false
         }
         
         _ = await toggleItem(item, enable: false)
-        do {
-            try SafetyGuard.safelyRemoveItem(at: URL(fileURLWithPath: item.path))
-            return true
-        } catch {
-            return false
-        }
+        let result = try? SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: item.path), moveToTrash: true)
+        return result?.success ?? false
     }
 }

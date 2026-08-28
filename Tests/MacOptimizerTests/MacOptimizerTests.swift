@@ -616,4 +616,14 @@ final class MacOptimizerTests: XCTestCase {
         let items = await AppUninstallerService.shared.findAssociatedFiles(for: safari)
         XCTAssertTrue(items.isEmpty, "System apps must never have uninstallation files discovered")
     }
+    
+    // MARK: - 18. Privacy & Security Posture Audit Tests
+    func testPrivacyAuditServiceEvaluation() async {
+        let report = await PrivacyAuditService.shared.runSecurityAudit()
+        XCTAssertGreaterThanOrEqual(report.score, 0)
+        XCTAssertLessThanOrEqual(report.score, 100)
+        XCTAssertGreaterThanOrEqual(report.items.count, 4)
+        XCTAssertFalse(report.ratingDescription.isEmpty)
+        XCTAssertFalse(report.ratingColorName.isEmpty)
+    }
 }

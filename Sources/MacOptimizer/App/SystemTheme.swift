@@ -15,6 +15,18 @@ public enum SystemTheme {
         endPoint: .bottomTrailing
     )
     
+    public static let successGradient = LinearGradient(
+        colors: [Color.green, Color.mint],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    public static let securityGradient = LinearGradient(
+        colors: [Color.teal, Color.cyan],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
     public static let junkGradient = LinearGradient(
         colors: [Color.purple, Color.indigo],
         startPoint: .topLeading,

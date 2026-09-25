@@ -5,6 +5,13 @@ import SwiftUI
 public struct AutonomousGuardView: View {
     @ObservedObject var appState: AppState
     @State private var isRadarPulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    /// The radar pulse is a `repeatForever` animation (continuous frame rendering while on screen).
+    /// Run it only when it conveys state — an active watchdog — and never with Reduce Motion.
+    private var shouldPulse: Bool {
+        appState.autonomousConfig.isWatchdogActive && !reduceMotion
+    }
     
     private var resolvedCount: Int {
         appState.autonomousAlerts.filter { $0.isResolved || $0.autoHealed }.count
@@ -31,9 +38,13 @@ public struct AutonomousGuardView: View {
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                isRadarPulsing = true
-            }
+            isRadarPulsing = shouldPulse
+        }
+        .onDisappear {
+            isRadarPulsing = false
+        }
+        .onChange(of: shouldPulse) { _, pulse in
+            isRadarPulsing = pulse
         }
     }
     
@@ -45,6 +56,8 @@ public struct AutonomousGuardView: View {
                     Circle()
                         .stroke(Color.green.opacity(0.3), lineWidth: isRadarPulsing ? 10 : 2)
                         .scaleEffect(isRadarPulsing ? 1.15 : 0.95)
+                        // Scoped animation: only this ring animates, and stopping resets it cleanly.
+                        .animation(isRadarPulsing ? .easeInOut(duration: 1.8).repeatForever(autoreverses: true) : .default, value: isRadarPulsing)
                         .frame(width: 56, height: 56)
                     
                     Circle()

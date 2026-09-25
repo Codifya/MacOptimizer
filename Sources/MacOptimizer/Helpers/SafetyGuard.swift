@@ -26,7 +26,8 @@ public enum SafetyGuard: Sendable {
     
     private static let userHomePath = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
     
-    private static var protectedUserPaths: Set<String> {
+    /// Built once (was a computed property that rebuilt a 26-element Set on every path check).
+    private static let protectedUserPaths: Set<String> = {
         let home = userHomePath
         return [
             home,
@@ -56,7 +57,7 @@ public enum SafetyGuard: Sendable {
             "\(home)/.aws",
             "\(home)/.config"
         ]
-    }
+    }()
     
     // MARK: - Known Essential Developer & App Folders (Never auto-delete from App Leftovers)
     public static let essentialAppSupportFolders: Set<String> = [

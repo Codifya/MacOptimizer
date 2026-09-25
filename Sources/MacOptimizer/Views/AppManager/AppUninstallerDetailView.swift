@@ -16,9 +16,7 @@ public struct AppUninstallerDetailView: View {
         VStack(spacing: 16) {
             // Header
             HStack(spacing: 14) {
-                let icon = NSWorkspace.shared.icon(forFile: app.path)
-                Image(nsImage: icon)
-                    .resizable()
+                AppIconView(path: app.path)
                     .frame(width: 48, height: 48)
                 
                 VStack(alignment: .leading, spacing: 2) {

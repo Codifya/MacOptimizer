@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 
 /// Model representing a running process on macOS
 public struct ProcessInfoModel: Identifiable, Sendable, Equatable {

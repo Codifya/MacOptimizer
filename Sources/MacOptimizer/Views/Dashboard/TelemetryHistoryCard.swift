@@ -1,25 +1,15 @@
 import SwiftUI
 import Charts
 
-/// Telemetry history sample for Swift Charts visualization.
-public struct TelemetryChartSample: Identifiable, Sendable {
-    public let id = UUID()
-    public let timestamp: Date
-    public let cpuUsage: Double
-    public let ramPercentage: Double
-    
-    public init(timestamp: Date = Date(), cpuUsage: Double, ramPercentage: Double) {
-        self.timestamp = timestamp
-        self.cpuUsage = cpuUsage
-        self.ramPercentage = ramPercentage
-    }
-}
-
 /// Responsive live observability card rendering CPU and RAM performance charts.
+///
+/// The sample history lives in `LiveMetricsStore.chartHistory` (a fixed-capacity ring buffer), so it
+/// survives navigation, never grows, and is not rebuilt with synthetic points on every appearance.
 public struct TelemetryHistoryCard: View {
-    @ObservedObject var appState: AppState
-    @State private var samples: [TelemetryChartSample] = []
+    @ObservedObject var metrics: LiveMetricsStore
     @State private var selectedMetric: MetricType = .both
+    
+    private var samples: RingBuffer<TelemetryChartSample> { metrics.chartHistory }
     
     enum MetricType: String, CaseIterable, Identifiable {
         case both = "Tümü"
@@ -32,20 +22,18 @@ public struct TelemetryHistoryCard: View {
     public var body: some View {
         GlassCard(cornerRadius: 16, padding: 18) {
             VStack(alignment: .leading, spacing: 14) {
-                // Header & Filter
-                HStack {
-                    Label("Canlı Telemetri & Performans Grafiği", systemImage: "chart.xyaxis.line")
-                        .font(.system(size: 14, weight: .bold))
-                    
-                    Spacer()
-                    
-                    Picker("", selection: $selectedMetric) {
-                        ForEach(MetricType.allCases) { metric in
-                            Text(metric.rawValue).tag(metric)
-                        }
+                // Header & Filter (stacks vertically when the window is too narrow)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        titleLabel
+                        Spacer()
+                        metricPicker
+                            .frame(minWidth: 200, idealWidth: 240, maxWidth: 280)
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 220)
+                    VStack(alignment: .leading, spacing: 8) {
+                        titleLabel
+                        metricPicker
+                    }
                 }
                 
                 // Chart Container
@@ -149,7 +137,7 @@ public struct TelemetryHistoryCard: View {
                         Circle()
                             .fill(Color.orange)
                             .frame(width: 8, height: 8)
-                        Text("CPU: %\(String(format: "%.1f", appState.cpuStats.totalUsage))")
+                        Text("CPU: %\(String(format: "%.1f", metrics.cpuStats.totalUsage))")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     
@@ -157,49 +145,33 @@ public struct TelemetryHistoryCard: View {
                         Circle()
                             .fill(Color.blue)
                             .frame(width: 8, height: 8)
-                        Text("RAM: %\(Int(appState.memoryStats.usedPercentage * 100)) (\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)))")
+                        Text("RAM: %\(Int(metrics.memoryStats.usedPercentage * 100)) (\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)))")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     
                     Spacer()
                     
-                    Text("Son 60 Saniye (Canlı Darwin API)")
+                    Text("Son \(LiveMetricsStore.chartHistoryCapacity) Örnek (Canlı Darwin API)")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
             }
         }
-        .onAppear {
-            seedInitialSamples()
-        }
-        .onChange(of: appState.cpuStats.totalUsage) { _, _ in
-            appendLiveSample()
-        }
     }
     
-    private func seedInitialSamples() {
-        let now = Date()
-        var initSamples: [TelemetryChartSample] = []
-        for i in (0..<10).reversed() {
-            let time = now.addingTimeInterval(-Double(i * 3))
-            initSamples.append(TelemetryChartSample(
-                timestamp: time,
-                cpuUsage: appState.cpuStats.totalUsage,
-                ramPercentage: appState.memoryStats.usedPercentage
-            ))
-        }
-        self.samples = initSamples
+    private var titleLabel: some View {
+        Label("Canlı Telemetri & Performans Grafiği", systemImage: "chart.xyaxis.line")
+            .font(.system(size: 14, weight: .bold))
+            .lineLimit(1)
     }
     
-    private func appendLiveSample() {
-        let newSample = TelemetryChartSample(
-            timestamp: Date(),
-            cpuUsage: appState.cpuStats.totalUsage,
-            ramPercentage: appState.memoryStats.usedPercentage
-        )
-        samples.append(newSample)
-        if samples.count > 30 {
-            samples.removeFirst()
+    private var metricPicker: some View {
+        Picker("", selection: $selectedMetric) {
+            ForEach(MetricType.allCases) { metric in
+                Text(metric.rawValue).tag(metric)
+            }
         }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 }

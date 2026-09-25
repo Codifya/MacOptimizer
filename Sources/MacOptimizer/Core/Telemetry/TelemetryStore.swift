@@ -96,60 +96,73 @@ public actor TelemetryStore {
             sqlite3_bind_int64(stmt, 5, diskUsedBytes)
             
             sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
         }
+        sqlite3_finalize(stmt)
     }
     
-    /// Fetches historical telemetry points within the given hour range, downsampling if needed.
+    /// Fetches historical telemetry points within the given hour range, downsampled inside SQLite.
+    ///
+    /// The previous implementation materialised every raw row in the window into Swift structs and
+    /// then picked every n-th one — O(rows) allocations on the main user path. Bucketing with
+    /// `GROUP BY` returns at most `maxPoints` averaged rows, so memory is bounded by the chart size
+    /// regardless of how much history exists.
     public func fetchHistory(hours: Int, maxPoints: Int = 60) -> [TelemetryHistoryPoint] {
-        guard let db = connection.db else { return [] }
+        guard let db = connection.db, maxPoints > 0 else { return [] }
         
-        let cutoff = Date().addingTimeInterval(-Double(hours * 3600)).timeIntervalSince1970
+        let now = Date().timeIntervalSince1970
+        let windowSeconds = Double(max(1, hours) * 3600)
+        let cutoff = now - windowSeconds
+        let bucketSeconds = windowSeconds / Double(maxPoints)
+        
         let querySQL = """
-        SELECT id, timestamp, cpu_usage, ram_used_bytes, ram_pressure, disk_used_bytes
+        SELECT MIN(id), AVG(timestamp), AVG(cpu_usage), AVG(ram_used_bytes), MAX(ram_pressure), AVG(disk_used_bytes)
         FROM telemetry_raw
-        WHERE timestamp >= ?
-        ORDER BY timestamp ASC;
+        WHERE timestamp >= ?1
+        GROUP BY MIN(CAST((timestamp - ?1) / ?2 AS INTEGER), ?3 - 1)
+        ORDER BY 2 ASC
+        LIMIT ?3;
         """
         
         var stmt: OpaquePointer?
-        var rawPoints: [TelemetryHistoryPoint] = []
+        var points: [TelemetryHistoryPoint] = []
+        points.reserveCapacity(maxPoints)
         
         if sqlite3_prepare_v2(db, querySQL, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_double(stmt, 1, cutoff)
+            sqlite3_bind_double(stmt, 2, bucketSeconds)
+            sqlite3_bind_int(stmt, 3, Int32(maxPoints))
             
             while sqlite3_step(stmt) == SQLITE_ROW {
-                let id = sqlite3_column_int64(stmt, 0)
-                let ts = sqlite3_column_double(stmt, 1)
-                let cpu = sqlite3_column_double(stmt, 2)
-                let ramBytes = UInt64(max(0, sqlite3_column_int64(stmt, 3)))
-                let pressure = Int(sqlite3_column_int(stmt, 4))
-                let diskBytes = sqlite3_column_int64(stmt, 5)
-                
-                rawPoints.append(TelemetryHistoryPoint(
-                    id: id,
-                    timestamp: Date(timeIntervalSince1970: ts),
-                    cpuUsage: cpu,
-                    ramUsedBytes: ramBytes,
-                    ramPressureLevel: pressure,
-                    diskUsedBytes: diskBytes
+                points.append(TelemetryHistoryPoint(
+                    id: sqlite3_column_int64(stmt, 0),
+                    timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 1)),
+                    cpuUsage: sqlite3_column_double(stmt, 2),
+                    ramUsedBytes: UInt64(max(0, sqlite3_column_double(stmt, 3))),
+                    ramPressureLevel: Int(sqlite3_column_int(stmt, 4)),
+                    diskUsedBytes: Int64(sqlite3_column_double(stmt, 5))
                 ))
             }
-            sqlite3_finalize(stmt)
         }
-        
-        guard rawPoints.count > maxPoints else { return rawPoints }
-        
-        // Downsample evenly to maxPoints
-        let stride = Double(rawPoints.count) / Double(maxPoints)
-        var downsampled: [TelemetryHistoryPoint] = []
-        for i in 0..<maxPoints {
-            let index = Int(Double(i) * stride)
-            if index < rawPoints.count {
-                downsampled.append(rawPoints[index])
-            }
+        sqlite3_finalize(stmt)
+        return points
+    }
+    
+    private var lastPruneTime: Date?
+    
+    /// Records one sample and prunes expired rows at most once per hour, so the database stays bounded
+    /// (≈ 2 880 rows at the 60 s recording cadence) without a separate maintenance timer.
+    public func recordAndPrune(
+        cpuUsage: Double,
+        ramUsedBytes: UInt64,
+        ramPressureLevel: Int,
+        diskUsedBytes: Int64
+    ) {
+        record(cpuUsage: cpuUsage, ramUsedBytes: ramUsedBytes, ramPressureLevel: ramPressureLevel, diskUsedBytes: diskUsedBytes)
+        let now = Date()
+        if lastPruneTime.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
+            lastPruneTime = now
+            purgeOldRawSamples()
         }
-        return downsampled
     }
     
     /// Cleans up raw samples older than 48 hours to keep the database size minimal.

@@ -39,13 +39,17 @@ public actor AutonomousGuardService {
     
     public init() {}
     
-    /// Evaluates current system metrics against configured thresholds and returns any triggered alerts and auto-healed actions
+    /// Evaluates current system metrics against configured thresholds and returns any triggered alerts and auto-healed actions.
+    /// - Parameter processesAreFresh: `false` when `processes` is a cached list from an earlier cycle.
+    ///   The runaway rule only counts fresh samples; counting a cached list three times used to raise a
+    ///   "sustained high CPU" alert from a single measurement.
     public func evaluateCycle(
         memory: MemoryStats,
         cpu: CPUStats,
         disk: DiskStats,
         processes: [ProcessInfoModel],
-        config: AutonomousConfig
+        config: AutonomousConfig,
+        processesAreFresh: Bool = true
     ) async -> [AutonomousAlert] {
         guard config.isWatchdogActive else { return [] }
         
@@ -85,29 +89,36 @@ public actor AutonomousGuardService {
             }
         }
         
-        // 2. Runaway Process Watchdog (>90% CPU for multiple cycles) - ONLY for killable non-system processes
-        for proc in processes where proc.cpuPercentage >= config.cpuRunawayThresholdPercent {
-            // Strictly skip protected system processes like WindowServer, kernel_task, etc.
-            guard !proc.isProtected && SafetyPolicyEngine.canTerminateProcess(pid: proc.pid, name: proc.name, path: proc.path) else {
-                continue
+        // 2. Runaway Process Watchdog (>90% CPU for multiple consecutive fresh samples) - ONLY for killable non-system processes
+        if processesAreFresh {
+            var stillHot: Set<Int32> = []
+            for proc in processes where proc.cpuPercentage >= config.cpuRunawayThresholdPercent {
+                // Strictly skip protected system processes like WindowServer, kernel_task, etc.
+                guard !proc.isProtected && SafetyPolicyEngine.canTerminateProcess(pid: proc.pid, name: proc.name, path: proc.path) else {
+                    continue
+                }
+                stillHot.insert(proc.pid)
+                
+                let count = (consecutiveHighCPUCounts[proc.pid] ?? 0) + 1
+                consecutiveHighCPUCounts[proc.pid] = count
+                
+                if count >= 3 { // Detected high CPU for 3 consecutive samples
+                    let alert = AutonomousAlert(
+                        title: "Kaçak Süreç: \(proc.name)",
+                        message: "\(proc.name) (PID: \(proc.pid)) sürekli olarak %\(proc.cpuFormatted) işlemci tüketiyor. Donmuş veya aşırı yüklenmiş olabilir.",
+                        type: .runawayProcess,
+                        timestamp: now,
+                        isResolved: false,
+                        autoHealed: false,
+                        action: AIAction(title: "İşlemi Sonlandır", type: .killProcess, targetPID: proc.pid)
+                    )
+                    generatedAlerts.append(alert)
+                    consecutiveHighCPUCounts[proc.pid] = 0 // Reset count after alert
+                }
             }
-            
-            let count = (consecutiveHighCPUCounts[proc.pid] ?? 0) + 1
-            consecutiveHighCPUCounts[proc.pid] = count
-            
-            if count >= 3 { // Detected high CPU for 3 consecutive cycles
-                let alert = AutonomousAlert(
-                    title: "Kaçak Süreç: \(proc.name)",
-                    message: "\(proc.name) (PID: \(proc.pid)) sürekli olarak %\(proc.cpuFormatted) işlemci tüketiyor. Donmuş veya aşırı yüklenmiş olabilir.",
-                    type: .runawayProcess,
-                    timestamp: now,
-                    isResolved: false,
-                    autoHealed: false,
-                    action: AIAction(title: "İşlemi Sonlandır", type: .killProcess, targetPID: proc.pid)
-                )
-                generatedAlerts.append(alert)
-                consecutiveHighCPUCounts[proc.pid] = 0 // Reset count after alert
-            }
+            // "Consecutive" means consecutive: a sample below the threshold resets the streak. This also
+            // drops dead PIDs, keeping the tracker bounded by the number of currently hot processes.
+            consecutiveHighCPUCounts = consecutiveHighCPUCounts.filter { stillHot.contains($0.key) }
         }
         
         // 3. Thermal Throttling Watchdog Rule
@@ -161,14 +172,6 @@ public actor AutonomousGuardService {
                     action: AIAction(title: "Gereksiz Dosyaları Tara", type: .cleanJunk)
                 )
                 generatedAlerts.append(alert)
-            }
-        }
-        
-        // Clean up dead PIDs from tracker
-        let livePIDs = Set(processes.map { $0.pid })
-        for pid in consecutiveHighCPUCounts.keys {
-            if !livePIDs.contains(pid) {
-                consecutiveHighCPUCounts.removeValue(forKey: pid)
             }
         }
         

@@ -36,7 +36,7 @@ public actor AppUpdateCheckerService {
                             mutableApp.updateInfo.hasUpdate = true
                             mutableApp.updateInfo.latestVersion = brewInfo.latestVersion
                             mutableApp.updateInfo.updateSource = .homebrew
-                            mutableApp.updateInfo.downloadURL = "brew upgrade --cask \(brewInfo.name)"
+                            mutableApp.updateInfo.downloadURL = Self.isValidCaskToken(brewInfo.name) ? "brew upgrade --cask \(brewInfo.name)" : ""
                             return mutableApp
                         }
                         
@@ -113,6 +113,41 @@ public actor AppUpdateCheckerService {
         return nil
     }
     
+    /// Cask tokens are lowercase identifiers; anything else is rejected before reaching a process.
+    public static func isValidCaskToken(_ token: String) -> Bool {
+        guard !token.isEmpty, token.count <= 128, let first = token.unicodeScalars.first,
+              CharacterSet.lowercaseLetters.union(.decimalDigits).contains(first) else { return false }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789@._+-")
+        return token.unicodeScalars.allSatisfy { allowed.contains($0) }
+    }
+    
+    /// Extracts the cask token from the `brew upgrade --cask <token>` marker stored in `downloadURL`.
+    public static func caskToken(fromUpgradeCommand command: String) -> String? {
+        let prefix = "brew upgrade --cask "
+        guard command.hasPrefix(prefix) else { return nil }
+        let token = String(command.dropFirst(prefix.count))
+        return isValidCaskToken(token) ? token : nil
+    }
+    
+    /// Upgrades a Homebrew cask by executing `brew` directly — no shell, validated token, and a
+    /// timeout sized for real downloads. (The previous UI passed the stored string to `zsh -c` with a
+    /// 15 s timeout: remote appcast data could inject shell commands, and real upgrades were killed.)
+    public func upgradeHomebrewCask(token: String) async -> (success: Bool, message: String) {
+        guard Self.isValidCaskToken(token) else {
+            return (false, "Geçersiz Homebrew paket adı.")
+        }
+        guard let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            return (false, "Homebrew bulunamadı.")
+        }
+        let result = await SystemCommandRunner.run(
+            executable: brew,
+            arguments: ["upgrade", "--cask", token],
+            timeoutSeconds: 900,
+            outputLimit: 256 * 1024
+        )
+        return (result.isSuccess, result.isSuccess ? "\(token) Homebrew üzerinden güncellendi." : "\(token) güncellenemedi: \(result.standardError.suffix(200))")
+    }
+    
     /// Checks Homebrew Cask outdated list
     private func fetchHomebrewOutdatedCasks() async -> [String: (name: String, latestVersion: String)] {
         var map: [String: (name: String, latestVersion: String)] = [:]
@@ -128,7 +163,12 @@ public actor AppUpdateCheckerService {
         
         guard let brew = brewPath else { return map }
         
-        let result = await SystemCommandRunner.run(executable: brew, arguments: ["outdated", "--cask", "--json=v2"])
+        let result = await SystemCommandRunner.run(
+            executable: brew,
+            arguments: ["outdated", "--cask", "--json=v2"],
+            environment: ["HOMEBREW_NO_AUTO_UPDATE": "1"], // never trigger a network self-update here
+            timeoutSeconds: 30
+        )
         guard result.isSuccess, let data = result.standardOutput.data(using: .utf8) else {
             return map
         }

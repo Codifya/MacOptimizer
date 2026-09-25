@@ -95,9 +95,7 @@ public struct AppUpdatesView: View {
             ForEach(appsWithUpdates) { app in
                 GlassCard(cornerRadius: 14, padding: 12) {
                     HStack(spacing: 12) {
-                        let icon = NSWorkspace.shared.icon(forFile: app.path)
-                        Image(nsImage: icon)
-                            .resizable()
+                        AppIconView(path: app.path)
                             .frame(width: 36, height: 36)
                         
                         VStack(alignment: .leading, spacing: 2) {
@@ -138,12 +136,17 @@ public struct AppUpdatesView: View {
                             
                             if !app.updateInfo.downloadURL.isEmpty {
                                 Button {
-                                    if app.updateInfo.downloadURL.hasPrefix("brew ") {
-                                        Task {
-                                            _ = await SystemCommandRunner.runShell(app.updateInfo.downloadURL)
+                                    if app.updateInfo.updateSource == .homebrew {
+                                        // Only Homebrew-sourced entries may run brew, and only with a validated token.
+                                        if let token = AppUpdateCheckerService.caskToken(fromUpgradeCommand: app.updateInfo.downloadURL) {
                                             appState.showNotification(message: "\(app.name) Homebrew üzerinden güncelleniyor.")
+                                            Task {
+                                                let result = await AppUpdateCheckerService.shared.upgradeHomebrewCask(token: token)
+                                                appState.showNotification(message: result.message)
+                                            }
                                         }
-                                    } else if let url = URL(string: app.updateInfo.downloadURL) {
+                                    } else if let url = URL(string: app.updateInfo.downloadURL),
+                                              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http" {
                                         NSWorkspace.shared.open(url)
                                     }
                                 } label: {

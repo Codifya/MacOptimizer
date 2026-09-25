@@ -38,7 +38,7 @@ struct MacOptimizerApp: App {
         
         // Menu Bar Extra for fast access
         MenuBarExtra("MacOptimizer", systemImage: "bolt.shield.fill") {
-            MenuBarView(appState: appState)
+            MenuBarView(appState: appState, metrics: appState.metrics)
         }
         .menuBarExtraStyle(.window)
     }
@@ -47,6 +47,7 @@ struct MacOptimizerApp: App {
 /// Rich interactive popover view inside the macOS Menu Bar Extra
 struct MenuBarView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject var metrics: LiveMetricsStore
     
     var body: some View {
         VStack(spacing: 12) {
@@ -62,8 +63,8 @@ struct MenuBarView: View {
                 Spacer()
                 
                 MetricBadge(
-                    text: appState.cpuStats.thermalState.rawValue,
-                    colorName: appState.cpuStats.thermalState.colorName
+                    text: metrics.cpuStats.thermalState.rawValue,
+                    colorName: metrics.cpuStats.thermalState.colorName
                 )
             }
             
@@ -78,12 +79,12 @@ struct MenuBarView: View {
                     
                     Spacer()
                     
-                    Text("\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)) (\(Int(appState.memoryStats.usedPercentage * 100))%)")
+                    Text("\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) (\(Int(metrics.memoryStats.usedPercentage * 100))%)")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundColor(.blue)
                 }
                 
-                AnimatedProgressBar(progress: appState.memoryStats.usedPercentage, gradient: SystemTheme.memoryGradient, height: 5)
+                AnimatedProgressBar(progress: metrics.memoryStats.usedPercentage, gradient: SystemTheme.memoryGradient, height: 5)
             }
             
             // 2. CPU Metric Row
@@ -95,12 +96,12 @@ struct MenuBarView: View {
                     
                     Spacer()
                     
-                    Text(String(format: "%.1f%%", appState.cpuStats.totalUsage))
+                    Text(String(format: "%.1f%%", metrics.cpuStats.totalUsage))
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundColor(.orange)
                 }
                 
-                AnimatedProgressBar(progress: appState.cpuStats.totalUsage / 100.0, gradient: SystemTheme.primaryGradient, height: 5)
+                AnimatedProgressBar(progress: metrics.cpuStats.totalUsage / 100.0, gradient: SystemTheme.primaryGradient, height: 5)
             }
             
             // 3. Disk Metric Row
@@ -111,7 +112,7 @@ struct MenuBarView: View {
                 
                 Spacer()
                 
-                Text(ByteFormatter.format(appState.diskStats.freeBytes))
+                Text(ByteFormatter.format(metrics.diskStats.freeBytes))
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(.purple)
             }

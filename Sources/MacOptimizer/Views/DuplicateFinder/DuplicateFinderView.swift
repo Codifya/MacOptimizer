@@ -130,6 +130,14 @@ public struct DuplicateFinderView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
+                
+                Button("Taramayı İptal Et") {
+                    appState.cancelDuplicateScan()
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.red)
             }
             .frame(maxWidth: .infinity)
         }

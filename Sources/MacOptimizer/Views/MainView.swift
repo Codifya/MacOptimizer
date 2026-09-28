@@ -99,9 +99,7 @@ public struct MainView: View {
                         HStack {
                             Label(NavigationTab.memory.title, systemImage: NavigationTab.memory.iconName)
                             Spacer()
-                            Text(String(format: "%.0f%%", appState.memoryStats.usedPercentage * 100))
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(appState.memoryStats.pressureLevel == .critical ? .red : .secondary)
+                            SidebarMemoryBadge(metrics: appState.metrics)
                         }
                     }
                     
@@ -178,8 +176,7 @@ public struct MainView: View {
                     Text("Kullanılabilir RAM")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
-                    Text(ByteFormatter.formatMemory(appState.memoryStats.freeAndInactiveBytes))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                    SidebarAvailableMemoryText(metrics: appState.metrics)
                 }
                 
                 Spacer()
@@ -239,5 +236,28 @@ public struct MainView: View {
         case .settings:
             SettingsView()
         }
+    }
+}
+
+// MARK: - Live metric leaves
+// Small views that observe `LiveMetricsStore` directly, so a metrics tick re-renders only these
+// labels instead of the whole sidebar `List`.
+
+private struct SidebarMemoryBadge: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    
+    var body: some View {
+        Text(String(format: "%.0f%%", metrics.memoryStats.usedPercentage * 100))
+            .font(.system(size: 10, weight: .bold, design: .monospaced))
+            .foregroundColor(metrics.memoryStats.pressureLevel == .critical ? .red : .secondary)
+    }
+}
+
+private struct SidebarAvailableMemoryText: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    
+    var body: some View {
+        Text(ByteFormatter.formatMemory(metrics.memoryStats.freeAndInactiveBytes))
+            .font(.system(size: 13, weight: .bold, design: .rounded))
     }
 }

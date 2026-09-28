@@ -5,8 +5,20 @@ import IOKit.ps
 
 /// High-performance system monitor using Darwin Mach APIs, sysctl, and IOKit.
 /// Optimized for ultra-low CPU consumption, caching, and battery efficiency.
-public actor SystemMonitorService {
+public actor SystemMonitorService: SystemMetricsSampling {
     public static let shared = SystemMonitorService()
+    
+    /// `mach_host_self()` returns a new send right on every call; calling it per tick leaks port
+    /// references (a slow, unbounded kernel-side leak over long sessions). Acquire it exactly once.
+    private static let hostPort: mach_port_t = mach_host_self()
+    
+    /// Static hardware identity — computed once instead of 2–4 sysctl calls + string work per tick.
+    private static let processorName: String = SystemMonitorService.readProcessorName()
+    private static let modelIdentifier: String = SystemMonitorService.readModelIdentifier()
+    private static let osVersionString: String = {
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        return "macOS \(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+    }()
     
     private var lastCPULoadInfo: host_cpu_load_info?
     private var cachedProcesses: [ProcessInfoModel] = []
@@ -26,10 +38,9 @@ public actor SystemMonitorService {
         var vmStats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
         
-        let hostPort = mach_host_self()
         let result = withUnsafeMutablePointer(to: &vmStats) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics64(hostPort, HOST_VM_INFO64, $0, &count)
+                host_statistics64(Self.hostPort, HOST_VM_INFO64, $0, &count)
             }
         }
         
@@ -84,7 +95,7 @@ public actor SystemMonitorService {
         
         let result = withUnsafeMutablePointer(to: &cpuLoad) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &count)
+                host_statistics(Self.hostPort, HOST_CPU_LOAD_INFO, $0, &count)
             }
         }
         
@@ -110,7 +121,7 @@ public actor SystemMonitorService {
         
         cpuStats.physicalCores = ProcessInfo.processInfo.activeProcessorCount
         cpuStats.logicalCores = ProcessInfo.processInfo.processorCount
-        cpuStats.processorName = getProcessorName()
+        cpuStats.processorName = Self.processorName
         
         switch ProcessInfo.processInfo.thermalState {
         case .nominal: cpuStats.thermalState = .nominal
@@ -251,12 +262,10 @@ public actor SystemMonitorService {
     public func fetchHardwareInfo() -> HardwareInfo {
         var info = HardwareInfo()
         
-        info.chipName = getProcessorName()
-        info.modelName = getModelIdentifier()
+        info.chipName = Self.processorName
+        info.modelName = Self.modelIdentifier
         info.memorySizeFormatted = ByteFormatter.formatMemory(ProcessInfo.processInfo.physicalMemory)
-        
-        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
-        info.osVersion = "macOS \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion)"
+        info.osVersion = Self.osVersionString
         
         info.uptimeString = getSystemUptime()
         
@@ -330,6 +339,9 @@ public actor SystemMonitorService {
     }
     
     // MARK: - Running Processes Scanner (Optimized with short-term cache)
+    /// Spawns `/bin/ps` (setuid on macOS, the only unprivileged way to read RSS/CPU of root-owned
+    /// processes such as WindowServer). Callers control the cadence through `MonitoringCoordinator`;
+    /// the short cache only deduplicates bursts of manual refreshes.
     public func fetchRunningProcesses(forceRefresh: Bool = false) async -> [ProcessInfoModel] {
         if !forceRefresh,
            let lastTime = lastProcessFetchTime,
@@ -337,24 +349,32 @@ public actor SystemMonitorService {
            !cachedProcesses.isEmpty {
             return cachedProcesses
         }
-        
-        let runningApps = NSWorkspace.shared.runningApplications
+        return await sampleProcessList() ?? cachedProcesses
+    }
+    
+    private func sampleProcessList() async -> [ProcessInfoModel]? {
+        let runningApps = NSWorkspace.shared.runningApplications // documented thread-safe
         var appDict: [pid_t: NSRunningApplication] = [:]
+        appDict.reserveCapacity(runningApps.count)
         for app in runningApps {
             appDict[app.processIdentifier] = app
         }
         
-        let result = await SystemCommandRunner.run(executable: "/bin/ps", arguments: ["-axo", "pid,rss,%cpu,comm"], timeoutSeconds: 3.0)
-        guard result.isSuccess else { return cachedProcesses }
+        // Trailing "=" suppresses the header line. Output is ~60–120 KB on a busy Mac, which the
+        // old runner could not drain (64 KB pipe buffer deadlock); ProcessExecutor streams it.
+        let result = await SystemCommandRunner.run(
+            executable: "/bin/ps",
+            arguments: ["-axo", "pid=,rss=,%cpu=,comm="],
+            timeoutSeconds: 3.0,
+            outputLimit: 2 * 1024 * 1024
+        )
+        guard result.isSuccess else { return nil }
         
         var processes: [ProcessInfoModel] = []
-        let lines = result.standardOutput.components(separatedBy: "\n")
+        processes.reserveCapacity(cachedProcesses.count + 16)
         
-        for (index, line) in lines.enumerated() {
-            guard index > 0 else { continue }
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let parts = trimmed.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
-            
+        for line in result.standardOutput.split(separator: "\n", omittingEmptySubsequences: true) {
+            let parts = line.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
             guard parts.count >= 4,
                   let pid = Int32(parts[0]),
                   let rssKB = UInt64(parts[1]),
@@ -363,41 +383,39 @@ public actor SystemMonitorService {
             }
             
             let path = String(parts[3])
-            let fullURL = URL(fileURLWithPath: path)
-            var name = fullURL.lastPathComponent
-            
             let runningApp = appDict[pid]
-            let isUserApp = runningApp != nil
+            let name = runningApp?.localizedName ?? String(path.split(separator: "/").last ?? Substring(path))
             
-            if let app = runningApp, let localizedName = app.localizedName {
-                name = localizedName
-            }
-            
-            let memoryBytes = rssKB * 1024
-            let isKillable = SafetyGuard.isProcessKillable(pid: pid, name: name, path: path)
-            
-            let proc = ProcessInfoModel(
+            processes.append(ProcessInfoModel(
                 pid: pid,
                 name: name,
                 path: path,
-                memoryBytes: memoryBytes,
+                memoryBytes: rssKB * 1024,
                 cpuPercentage: cpu,
-                isUserApp: isUserApp,
+                isUserApp: runningApp != nil,
                 bundleIdentifier: runningApp?.bundleIdentifier,
-                isProtected: !isKillable
-            )
-            
-            processes.append(proc)
+                isProtected: !SafetyGuard.isProcessKillable(pid: pid, name: name, path: path)
+            ))
         }
         
-        let sorted = processes.sorted { $0.memoryBytes > $1.memoryBytes }
-        self.cachedProcesses = sorted
+        processes.sort { $0.memoryBytes > $1.memoryBytes }
+        self.cachedProcesses = processes
         self.lastProcessFetchTime = Date()
-        return sorted
+        return processes
     }
     
+    // MARK: - SystemMetricsSampling
+    public func sampleCore() -> (MemoryStats, CPUStats, NetworkStats) {
+        (fetchMemoryStats(), fetchCPUStats(), fetchNetworkStats())
+    }
+    
+    public func sampleDisk() -> DiskStats { fetchDiskStats() }
+    public func sampleBattery() -> BatteryStats { fetchBatteryStats() }
+    public func sampleHardware() -> HardwareInfo { fetchHardwareInfo() }
+    public func sampleProcesses() async -> [ProcessInfoModel]? { await sampleProcessList() }
+    
     // MARK: - Internal Helpers
-    private func getProcessorName() -> String {
+    private static func readProcessorName() -> String {
         var size: size_t = 0
         sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0)
         if size > 0 {
@@ -427,7 +445,7 @@ public actor SystemMonitorService {
         #endif
     }
     
-    private func getModelIdentifier() -> String {
+    private static func readModelIdentifier() -> String {
         var size: size_t = 0
         sysctlbyname("hw.model", nil, &size, nil, 0)
         guard size > 0 else { return "Mac" }

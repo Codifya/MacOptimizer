@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Dashboard overview displaying real-time metrics, AI health status, hardware info, quick optimizer, and process list.
 /// Fully responsive across compact, standard, and ultra-wide macOS displays.
+///
+/// State isolation: this view observes only `AppState` (user-driven, low-frequency state). Every
+/// section that renders live metrics is a separate subview observing `LiveMetricsStore`, so a
+/// metrics tick re-evaluates those sections only — not the AI banner, hero card or quick actions.
 public struct DashboardView: View {
     @ObservedObject var appState: AppState
     
@@ -18,21 +22,13 @@ public struct DashboardView: View {
                 smartOptimizationHero
                 
                 // Real-Time Gauges Grid (RAM, CPU, Disk, Battery - Adaptive 2 to 4 columns)
-                gaugesRow
+                DashboardGaugesGrid(metrics: appState.metrics)
                 
                 // Live Observability Telemetry History Chart (Swift Charts)
-                TelemetryHistoryCard(appState: appState)
+                TelemetryHistoryCard(metrics: appState.metrics)
                 
-                // Segmented Memory Breakdown
-                MemoryBreakdownCard(stats: appState.memoryStats)
-                
-                // Battery Health & Thermal Analytics
-                if appState.batteryStats.isPresent {
-                    BatteryAnalyticsCard(stats: appState.batteryStats)
-                }
-                
-                // Real-Time Network Throughput & Bandwidth
-                NetworkBandwidthCard(stats: appState.networkStats)
+                // Segmented Memory Breakdown, Battery Health & Network Throughput
+                DashboardLiveDetailCards(metrics: appState.metrics)
                 
                 // Bottom Section: Top Processes & Quick Maintenance (Responsive 1 or 2 columns)
                 bottomProcessesAndUtilitiesSection
@@ -51,26 +47,10 @@ public struct DashboardView: View {
     // MARK: - Header
     private var headerView: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(appState.hardwareInfo.modelName)
-                        .font(.system(size: 20, weight: .bold))
-                        .lineLimit(1)
-                    
-                    MetricBadge(text: appState.hardwareInfo.chipName, colorName: "blue")
-                    
-                    MetricBadge(text: appState.cpuStats.thermalState.rawValue, colorName: appState.cpuStats.thermalState.colorName)
-                    
-                    if appState.nimConfig.isEnabled {
-                        MetricBadge(text: appState.nimConfig.providerType.displayName, colorName: "purple")
-                    }
-                }
-                
-                Text("\(appState.hardwareInfo.osVersion) • Çalışma Süresi: \(appState.hardwareInfo.uptimeString)")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
+            DashboardHardwareHeader(
+                metrics: appState.metrics,
+                aiProviderName: appState.nimConfig.isEnabled ? appState.nimConfig.providerType.displayName : nil
+            )
             
             Spacer(minLength: 12)
             
@@ -226,70 +206,11 @@ public struct DashboardView: View {
         }
     }
     
-    // MARK: - Gauges Row (Adaptive Grid)
-    private var gaugesRow: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 14)], spacing: 14) {
-            // RAM Gauge
-            GlassCard(cornerRadius: 16, padding: 14) {
-                CircularGaugeView(
-                    percentage: appState.memoryStats.usedPercentage,
-                    title: "RAM Bellek",
-                    valueText: String(format: "%.0f%%", appState.memoryStats.usedPercentage * 100),
-                    subText: appState.memoryStats.swapUsedBytes > 0 ? "Swap: \(ByteFormatter.formatMemory(appState.memoryStats.swapUsedBytes))" : "\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(appState.memoryStats.totalBytes))",
-                    gradient: SystemTheme.memoryGradient,
-                    size: 115
-                )
-                .frame(maxWidth: .infinity)
-            }
-            
-            // CPU Gauge
-            GlassCard(cornerRadius: 16, padding: 14) {
-                CircularGaugeView(
-                    percentage: appState.cpuStats.totalUsage / 100.0,
-                    title: "İşlemci (CPU)",
-                    valueText: String(format: "%.1f%%", appState.cpuStats.totalUsage),
-                    subText: "\(appState.cpuStats.physicalCores) Çekirdek • \(appState.cpuStats.thermalState.rawValue)",
-                    gradient: SystemTheme.primaryGradient,
-                    size: 115
-                )
-                .frame(maxWidth: .infinity)
-            }
-            
-            // Disk Storage Gauge
-            GlassCard(cornerRadius: 16, padding: 14) {
-                CircularGaugeView(
-                    percentage: appState.diskStats.usedPercentage,
-                    title: "Disk Depolama",
-                    valueText: String(format: "%.0f%%", appState.diskStats.usedPercentage * 100),
-                    subText: "\(ByteFormatter.format(appState.diskStats.freeBytes)) Boş",
-                    gradient: SystemTheme.junkGradient,
-                    size: 115
-                )
-                .frame(maxWidth: .infinity)
-            }
-            
-            // Battery / Power Card
-            if appState.batteryStats.isPresent {
-                GlassCard(cornerRadius: 16, padding: 14) {
-                    CircularGaugeView(
-                        percentage: Double(appState.batteryStats.percentage) / 100.0,
-                        title: "Pil Durumu",
-                        valueText: "\(appState.batteryStats.percentage)%",
-                        subText: appState.batteryStats.powerSource,
-                        gradient: SystemTheme.updateGradient,
-                        size: 115
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-    
     // MARK: - Bottom Section (Responsive Grid)
     private var bottomProcessesAndUtilitiesSection: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16)], spacing: 16) {
-            TopProcessesCard(
-                processes: appState.runningProcesses,
+            LiveTopProcessesCard(
+                metrics: appState.metrics,
                 onKill: { pid in
                     appState.killProcess(pid: pid)
                 },
@@ -397,5 +318,143 @@ private struct QuickActionButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Live metric sections
+
+/// Model, chip, thermal state, OS and uptime. Badges collapse on narrow windows instead of truncating.
+private struct DashboardHardwareHeader: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    let aiProviderName: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    modelTitle
+                    MetricBadge(text: metrics.hardwareInfo.chipName, colorName: "blue")
+                    thermalBadge
+                    if let aiProviderName {
+                        MetricBadge(text: aiProviderName, colorName: "purple")
+                    }
+                }
+                HStack(spacing: 8) {
+                    modelTitle
+                    thermalBadge
+                }
+                modelTitle
+            }
+            
+            Text("\(metrics.hardwareInfo.osVersion) • Çalışma Süresi: \(metrics.hardwareInfo.uptimeString)")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+    }
+    
+    private var modelTitle: some View {
+        Text(metrics.hardwareInfo.modelName)
+            .font(.system(size: 20, weight: .bold))
+            .lineLimit(1)
+    }
+    
+    private var thermalBadge: some View {
+        MetricBadge(text: metrics.cpuStats.thermalState.rawValue, colorName: metrics.cpuStats.thermalState.colorName)
+    }
+}
+
+/// RAM, CPU, disk and battery gauges (adaptive 1–4 columns).
+private struct DashboardGaugesGrid: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 14)], spacing: 14) {
+            // RAM Gauge
+            GlassCard(cornerRadius: 16, padding: 14) {
+                CircularGaugeView(
+                    percentage: metrics.memoryStats.usedPercentage,
+                    title: "RAM Bellek",
+                    valueText: String(format: "%.0f%%", metrics.memoryStats.usedPercentage * 100),
+                    subText: metrics.memoryStats.swapUsedBytes > 0 ? "Swap: \(ByteFormatter.formatMemory(metrics.memoryStats.swapUsedBytes))" : "\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(metrics.memoryStats.totalBytes))",
+                    gradient: SystemTheme.memoryGradient,
+                    size: 115
+                )
+                .frame(maxWidth: .infinity)
+            }
+            
+            // CPU Gauge
+            GlassCard(cornerRadius: 16, padding: 14) {
+                CircularGaugeView(
+                    percentage: metrics.cpuStats.totalUsage / 100.0,
+                    title: "İşlemci (CPU)",
+                    valueText: String(format: "%.1f%%", metrics.cpuStats.totalUsage),
+                    subText: "\(metrics.cpuStats.physicalCores) Çekirdek • \(metrics.cpuStats.thermalState.rawValue)",
+                    gradient: SystemTheme.primaryGradient,
+                    size: 115
+                )
+                .frame(maxWidth: .infinity)
+            }
+            
+            // Disk Storage Gauge
+            GlassCard(cornerRadius: 16, padding: 14) {
+                CircularGaugeView(
+                    percentage: metrics.diskStats.usedPercentage,
+                    title: "Disk Depolama",
+                    valueText: String(format: "%.0f%%", metrics.diskStats.usedPercentage * 100),
+                    subText: "\(ByteFormatter.format(metrics.diskStats.freeBytes)) Boş",
+                    gradient: SystemTheme.junkGradient,
+                    size: 115
+                )
+                .frame(maxWidth: .infinity)
+            }
+            
+            // Battery / Power Card
+            if metrics.batteryStats.isPresent {
+                GlassCard(cornerRadius: 16, padding: 14) {
+                    CircularGaugeView(
+                        percentage: Double(metrics.batteryStats.percentage) / 100.0,
+                        title: "Pil Durumu",
+                        valueText: "\(metrics.batteryStats.percentage)%",
+                        subText: metrics.batteryStats.powerSource,
+                        gradient: SystemTheme.updateGradient,
+                        size: 115
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+}
+
+/// Memory breakdown, battery analytics and network throughput cards.
+private struct DashboardLiveDetailCards: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            MemoryBreakdownCard(stats: metrics.memoryStats)
+            
+            if metrics.batteryStats.isPresent {
+                BatteryAnalyticsCard(stats: metrics.batteryStats)
+            }
+            
+            NetworkBandwidthCard(stats: metrics.networkStats)
+        }
+    }
+}
+
+/// Top processes card fed from the live store (processes refresh on their own 7.5 s tier).
+private struct LiveTopProcessesCard: View {
+    @ObservedObject var metrics: LiveMetricsStore
+    let onKill: (Int32) -> Void
+    let onNavigateToMemory: () -> Void
+    
+    var body: some View {
+        TopProcessesCard(
+            processes: Array(metrics.runningProcesses.prefix(5)),
+            onKill: onKill,
+            onNavigateToMemory: onNavigateToMemory
+        )
     }
 }

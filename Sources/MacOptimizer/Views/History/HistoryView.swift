@@ -120,7 +120,8 @@ public struct HistoryView: View {
                         Text("Son 48 Saat").tag(48)
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 260)
+                    .labelsHidden()
+                    .frame(minWidth: 180, idealWidth: 260, maxWidth: 280)
                     .onChange(of: timeRangeHours) { _, _ in
                         loadTelemetryHistory()
                     }
@@ -139,7 +140,7 @@ public struct HistoryView: View {
                             
                             LineMark(
                                 x: .value("Zaman", point.timestamp),
-                                y: .value("RAM %", appState.memoryStats.totalBytes > 0 ? (Double(point.ramUsedBytes) / Double(appState.memoryStats.totalBytes)) * 100.0 : 0.0),
+                                y: .value("RAM %", (Double(point.ramUsedBytes) / Double(max(1, ProcessInfo.processInfo.physicalMemory))) * 100.0),
                                 series: .value("Metrik", "RAM")
                             )
                             .foregroundStyle(Color.blue)
@@ -272,6 +273,7 @@ public struct HistoryView: View {
     }
     
     private func loadTelemetryHistory() {
+        let timeRangeHours = self.timeRangeHours
         Task {
             let points = await TelemetryStore.shared.fetchHistory(hours: timeRangeHours, maxPoints: 50)
             await MainActor.run {

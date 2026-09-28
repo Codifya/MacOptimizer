@@ -15,6 +15,12 @@ This document outlines the performance benchmarks, measurement methodologies, an
 
 ## 📊 Benchmark Results
 
+> **Note (hardening pass):** the figures below predate the performance/concurrency hardening pass and
+> were not reproducible from the code at that time (e.g. the junk walk was serialised on an actor,
+> not parallel). See [`docs/PERFORMANCE_BASELINE.md`](docs/PERFORMANCE_BASELINE.md) and
+> [`docs/PERFORMANCE_REPORT.md`](docs/PERFORMANCE_REPORT.md) for measured/derived numbers and the
+> Instruments runs that validate them.
+
 | Benchmark Metric | Traditional Shell/Script Method | MacOptimizer Pro Native Architecture | Improvement Factor |
 | :--- | :--- | :--- | :--- |
 | **Mach-O Architecture Detection** | `lipo -archs /Path/to/binary` (~ 4.8 ms per app) | `MachOArchitectureDetector` (Direct Header Bytes) (~ 0.04 ms per app) | **~ 120x Faster** |

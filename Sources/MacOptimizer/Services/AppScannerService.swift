@@ -3,10 +3,15 @@ import AppKit
 
 /// High-performance scanner for installed macOS applications.
 /// Features concurrent batch inspection and direct Mach-O header parsing (MachOArchitectureDetector).
-public actor AppScannerService {
+///
+/// Stateless and `Sendable`. It used to be an actor whose `inspectApp` ran on the actor executor —
+/// the chunked TaskGroup therefore inspected apps one at a time — and each app's size was computed by
+/// hopping onto `JunkCleanerService`, queueing behind any junk scan. Inspection now runs in parallel
+/// off the cooperative pool and supports cancellation.
+public final class AppScannerService: Sendable {
     public static let shared = AppScannerService()
     
-    private let fileManager = FileManager.default
+    private var fileManager: FileManager { FileManager.default }
     private let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
     
     public init() {}
@@ -14,6 +19,7 @@ public actor AppScannerService {
     /// Scans all application directories and returns a list of InstalledApp models concurrently
     public func scanApplications(progressHandler: (@Sendable (String, Double) -> Void)? = nil) async -> [InstalledApp] {
         var appURLs: [URL] = []
+        var seen: Set<String> = []
         
         let searchDirectories = [
             URL(fileURLWithPath: "/Applications"),
@@ -28,7 +34,7 @@ public actor AppScannerService {
                 continue
             }
             for item in contents where item.pathExtension == "app" {
-                if !appURLs.contains(item) {
+                if seen.insert(item.standardizedFileURL.path).inserted { // O(1) instead of O(n) contains
                     appURLs.append(item)
                 }
             }
@@ -42,7 +48,7 @@ public actor AppScannerService {
         var processedCount = 0
         
         var index = 0
-        while index < appURLs.count {
+        while index < appURLs.count && !Task.isCancelled {
             let endIndex = min(index + chunkSize, appURLs.count)
             let chunk = Array(appURLs[index..<endIndex])
             
@@ -79,6 +85,10 @@ public actor AppScannerService {
     
     /// Inspects a single .app bundle using direct Mach-O header parsing
     public func inspectApp(at url: URL) async -> InstalledApp? {
+        await runBlocking { [self] flag in inspectAppSync(at: url, flag) }
+    }
+    
+    private func inspectAppSync(at url: URL, _ flag: CancellationFlag) -> InstalledApp? {
         let infoPlistURL = url.appendingPathComponent("Contents/Info.plist")
         guard fileManager.fileExists(atPath: infoPlistURL.path),
               let data = try? Data(contentsOf: infoPlistURL),
@@ -100,7 +110,7 @@ public actor AppScannerService {
         let arch = detectArchitecture(for: url, plist: plist)
         
         // Calculate size
-        let sizeBytes = await JunkCleanerService.shared.calculateSize(at: url)
+        let sizeBytes = FileSizeCalculator.size(of: url, cancellation: flag)
         
         // Last modified date
         let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate

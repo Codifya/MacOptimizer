@@ -88,6 +88,15 @@ public struct JunkCleanerView: View {
                                 .lineLimit(1)
                             
                             AnimatedProgressBar(progress: appState.junkScanProgress, gradient: SystemTheme.junkGradient, height: 5)
+                            
+                            if appState.isScanningJunk {
+                                Button("İptal") {
+                                    appState.cancelJunkScan()
+                                }
+                                .buttonStyle(.plain)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.red)
+                            }
                         }
                         .padding(.top, 2)
                     }

@@ -4,14 +4,20 @@ import SwiftUI
 /// Fully responsive across all macOS window sizes.
 public struct MemoryView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject private var metrics: LiveMetricsStore
     @State private var searchText = ""
     @State private var filterUserAppsOnly = false
     @State private var selectedProcessPID: Int32?
     @State private var showKillConfirmation = false
     @State private var processToKill: ProcessInfoModel?
     
+    public init(appState: AppState) {
+        self.appState = appState
+        self.metrics = appState.metrics
+    }
+    
     private var filteredProcesses: [ProcessInfoModel] {
-        appState.runningProcesses.filter { proc in
+        metrics.runningProcesses.filter { proc in
             let matchesSearch = searchText.isEmpty ||
                 proc.name.localizedCaseInsensitiveContains(searchText) ||
                 "\(proc.pid)".contains(searchText)
@@ -27,7 +33,7 @@ public struct MemoryView: View {
                 ramHeaderHero
                 
                 // Memory Breakdown Bar
-                MemoryBreakdownCard(stats: appState.memoryStats)
+                MemoryBreakdownCard(stats: metrics.memoryStats)
                 
                 // Process Task Manager Table
                 processTableSection
@@ -56,10 +62,10 @@ public struct MemoryView: View {
             HStack(spacing: 20) {
                 // Circular Gauge
                 CircularGaugeView(
-                    percentage: appState.memoryStats.usedPercentage,
+                    percentage: metrics.memoryStats.usedPercentage,
                     title: "Bellek Kullanımı",
-                    valueText: String(format: "%.0f%%", appState.memoryStats.usedPercentage * 100),
-                    subText: "\(ByteFormatter.formatMemory(appState.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(appState.memoryStats.totalBytes))",
+                    valueText: String(format: "%.0f%%", metrics.memoryStats.usedPercentage * 100),
+                    subText: "\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(metrics.memoryStats.totalBytes))",
                     gradient: SystemTheme.memoryGradient,
                     lineWidth: 10,
                     size: 105
@@ -72,8 +78,8 @@ public struct MemoryView: View {
                             .lineLimit(1)
                         
                         MetricBadge(
-                            text: "Basınç: \(appState.memoryStats.pressureLevel.rawValue)",
-                            colorName: appState.memoryStats.pressureLevel.colorName
+                            text: "Basınç: \(metrics.memoryStats.pressureLevel.rawValue)",
+                            colorName: metrics.memoryStats.pressureLevel.colorName
                         )
                     }
                     

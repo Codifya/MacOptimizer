@@ -110,11 +110,7 @@ public struct AppRowView: View {
         )
     }
     
-    @ViewBuilder
     private var appIconView: some View {
-        let appWorkspaceIcon = NSWorkspace.shared.icon(forFile: app.path)
-        Image(nsImage: appWorkspaceIcon)
-            .resizable()
-            .scaledToFit()
+        AppIconView(path: app.path)
     }
 }

@@ -2,16 +2,26 @@ import Foundation
 
 /// Comprehensive scanner and cleaner for macOS junk files, logs, caches, and developer build leftovers.
 /// Features parallel multi-category scanning, dry-run CleaningPlan generation, and strict Zero-Harm policy validation.
-public actor JunkCleanerService {
+///
+/// Stateless and `Sendable`: every filesystem operation runs through `runBlocking` on a GCD queue.
+/// This used to be an actor, which serialised the "parallel" category TaskGroup onto one executor,
+/// parked a cooperative-pool thread for the whole scan, and made every other caller (app scanner,
+/// uninstaller, smart optimisation) queue behind a running scan. Scans are now truly parallel and
+/// cancellable.
+public final class JunkCleanerService: Sendable {
     public static let shared = JunkCleanerService()
     
-    private let fileManager = FileManager.default
+    private var fileManager: FileManager { FileManager.default }
     private let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
     
     public init() {}
     
     // MARK: - Dry-Run CleaningPlan Generation
-    public func generateCleaningPlan(from groups: [JunkCategoryGroup]) -> CleaningPlan {
+    public func generateCleaningPlan(from groups: [JunkCategoryGroup]) async -> CleaningPlan {
+        await runBlocking(qos: .userInitiated) { _ in Self.buildCleaningPlan(from: groups) }
+    }
+    
+    private static func buildCleaningPlan(from groups: [JunkCategoryGroup]) -> CleaningPlan {
         var plannedItems: [CleanableItemPlan] = []
         var warnings: [String] = []
         
@@ -64,17 +74,15 @@ public actor JunkCleanerService {
             let progress = Double(idx) / max(1.0, totalCount)
             progressHandler?(item.name, progress)
             
-            let url = URL(fileURLWithPath: item.path)
-            do {
-                let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
-                if result.success {
-                    totalFreed += (result.bytesFreed > 0 ? result.bytesFreed : item.sizeBytes)
-                    cleanedCount += 1
-                } else {
-                    failedCount += 1
-                    errors.append(result.message)
-                }
-            } catch {
+            let outcome = await Self.remove(path: item.path, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
+            switch outcome {
+            case .success(let result) where result.success:
+                totalFreed += (result.bytesFreed > 0 ? result.bytesFreed : item.sizeBytes)
+                cleanedCount += 1
+            case .success(let result):
+                failedCount += 1
+                errors.append(result.message)
+            case .failure(let error):
                 failedCount += 1
                 errors.append("\(item.name): \(error.localizedDescription)")
             }
@@ -116,6 +124,8 @@ public actor JunkCleanerService {
                     return (cat, items)
                 }
             }
+            // Child tasks inherit cancellation from the caller; each category's runBlocking
+            // forwards it to the directory walk, so a cancelled scan stops within one pool slice.
             
             var completedCount = 0
             for await (cat, items) in group {
@@ -139,40 +149,49 @@ public actor JunkCleanerService {
     
     // MARK: - Scan Individual Category
     public func scanCategory(_ category: JunkCategoryType) async -> [JunkFileItem] {
-        switch category {
-        case .systemCache:
-            return scanUserCaches()
-        case .systemLogs:
-            return scanSystemLogs()
-        case .developerCache:
-            return scanDeveloperCaches()
-        case .browserCache:
-            return scanBrowserCaches()
-        case .trashBin:
-            return scanTrashBin()
-        case .largeFiles:
-            return scanLargeFiles(minSizeBytes: 100 * 1024 * 1024)
-        case .appLeftovers:
-            return await scanAppLeftovers()
+        await runBlocking { [self] flag in
+            switch category {
+            case .systemCache:
+                return scanUserCaches(flag)
+            case .systemLogs:
+                return scanSystemLogs(flag)
+            case .developerCache:
+                return scanDeveloperCaches(flag)
+            case .browserCache:
+                return scanBrowserCaches(flag)
+            case .trashBin:
+                return scanTrashBin(flag)
+            case .largeFiles:
+                return scanLargeFiles(minSizeBytes: 100 * 1024 * 1024, flag)
+            case .appLeftovers:
+                return scanAppLeftovers(flag)
+            }
+        }
+    }
+    
+    /// Removes one item off the cooperative pool (trashing or deleting large trees can take seconds).
+    private static func remove(path: String, moveToTrash: Bool) async -> Result<OperationExecutionResult, Error> {
+        await runBlocking(qos: .userInitiated) { _ in
+            Result { try SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: path), moveToTrash: moveToTrash) }
         }
     }
     
     // MARK: - User & System Caches
-    private func scanUserCaches() -> [JunkFileItem] {
+    private func scanUserCaches(_ flag: CancellationFlag) -> [JunkFileItem] {
         let cachesURL = homeDirectory.appendingPathComponent("Library/Caches")
-        return scanSubdirectories(in: cachesURL, category: .systemCache)
+        return scanSubdirectories(in: cachesURL, category: .systemCache, flag)
     }
     
     // MARK: - System & App Logs
-    private func scanSystemLogs() -> [JunkFileItem] {
+    private func scanSystemLogs(_ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         
         let userLogsURL = homeDirectory.appendingPathComponent("Library/Logs")
-        items.append(contentsOf: scanSubdirectories(in: userLogsURL, category: .systemLogs))
+        items.append(contentsOf: scanSubdirectories(in: userLogsURL, category: .systemLogs, flag))
         
         let crashReporterURL = homeDirectory.appendingPathComponent("Library/Logs/DiagnosticReports")
         if fileManager.fileExists(atPath: crashReporterURL.path) && PathProtectionPolicy.isCleanableCachePath(crashReporterURL.path) {
-            let size = calculateSize(at: crashReporterURL)
+            let size = FileSizeCalculator.size(of: crashReporterURL, cancellation: flag)
             if size > 0 {
                 items.append(JunkFileItem(
                     path: crashReporterURL.path,
@@ -189,7 +208,7 @@ public actor JunkCleanerService {
     }
     
     // MARK: - Developer Build & Tool Caches
-    private func scanDeveloperCaches() -> [JunkFileItem] {
+    private func scanDeveloperCaches(_ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         
         let devTargets: [(path: String, name: String, desc: String)] = [
@@ -210,10 +229,10 @@ public actor JunkCleanerService {
             ("Library/Caches/pypoetry", "Python Poetry Önbelleği", "Poetry sanal ortam ve paket havuzu")
         ]
         
-        for target in devTargets {
+        for target in devTargets where !flag.isCancelled {
             let url = homeDirectory.appendingPathComponent(target.path)
             if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path) {
-                let size = calculateSize(at: url)
+                let size = FileSizeCalculator.size(of: url, cancellation: flag)
                 if size > 0 {
                     items.append(JunkFileItem(
                         path: url.path,
@@ -231,7 +250,7 @@ public actor JunkCleanerService {
     }
     
     // MARK: - Browser Caches
-    private func scanBrowserCaches() -> [JunkFileItem] {
+    private func scanBrowserCaches(_ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         
         let browserPaths: [(path: String, name: String)] = [
@@ -244,10 +263,10 @@ public actor JunkCleanerService {
             ("Library/Caches/Firefox", "Mozilla Firefox Önbelleği")
         ]
         
-        for browser in browserPaths {
+        for browser in browserPaths where !flag.isCancelled {
             let url = homeDirectory.appendingPathComponent(browser.path)
             if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path) {
-                let size = calculateSize(at: url)
+                let size = FileSizeCalculator.size(of: url, cancellation: flag)
                 if size > 0 {
                     items.append(JunkFileItem(
                         path: url.path,
@@ -265,7 +284,7 @@ public actor JunkCleanerService {
     }
     
     // MARK: - Trash Bin
-    private func scanTrashBin() -> [JunkFileItem] {
+    private func scanTrashBin(_ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         let trashURL = homeDirectory.appendingPathComponent(".Trash")
         
@@ -273,8 +292,8 @@ public actor JunkCleanerService {
             return []
         }
         
-        for url in contents {
-            let size = calculateSize(at: url)
+        for url in contents where !flag.isCancelled {
+            let size = FileSizeCalculator.size(of: url, cancellation: flag)
             let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
             
             items.append(JunkFileItem(
@@ -292,11 +311,11 @@ public actor JunkCleanerService {
     }
     
     // MARK: - Large & Old Files
-    public func scanLargeFiles(minSizeBytes: Int64 = 100 * 1024 * 1024) -> [JunkFileItem] {
+    private func scanLargeFiles(minSizeBytes: Int64, _ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         let scanFolders = ["Downloads", "Documents", "Movies", "Music"]
         
-        for folder in scanFolders {
+        for folder in scanFolders where !flag.isCancelled {
             let dirURL = homeDirectory.appendingPathComponent(folder)
             guard let enumerator = fileManager.enumerator(
                 at: dirURL,
@@ -304,24 +323,33 @@ public actor JunkCleanerService {
                 options: [.skipsPackageDescendants, .skipsHiddenFiles]
             ) else { continue }
             
-            for case let fileURL as URL in enumerator {
-                guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .contentModificationDateKey]),
-                      values.isRegularFile == true,
-                      let size = values.fileSize,
-                      Int64(size) >= minSizeBytes else {
-                    continue
-                }
-                
-                if SafetyPolicyEngine.canDelete(path: fileURL.path) {
-                    items.append(JunkFileItem(
-                        path: fileURL.path,
-                        name: fileURL.lastPathComponent,
-                        sizeBytes: Int64(size),
-                        category: .largeFiles,
-                        isSelected: false,
-                        detail: "\(folder) / \(fileURL.pathExtension.uppercased()) Dosyası",
-                        lastModifiedDate: values.contentModificationDate
-                    ))
+            var exhausted = false
+            while !exhausted && !flag.isCancelled {
+                autoreleasepool {
+                    for _ in 0..<FileSizeCalculator.entriesPerPool {
+                        guard let fileURL = enumerator.nextObject() as? URL else {
+                            exhausted = true
+                            return
+                        }
+                        guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .contentModificationDateKey]),
+                              values.isRegularFile == true,
+                              let size = values.fileSize,
+                              Int64(size) >= minSizeBytes else {
+                            continue
+                        }
+                        
+                        if SafetyPolicyEngine.canDelete(path: fileURL.path) {
+                            items.append(JunkFileItem(
+                                path: fileURL.path,
+                                name: fileURL.lastPathComponent,
+                                sizeBytes: Int64(size),
+                                category: .largeFiles,
+                                isSelected: false,
+                                detail: "\(folder) / \(fileURL.pathExtension.uppercased()) Dosyası",
+                                lastModifiedDate: values.contentModificationDate
+                            ))
+                        }
+                    }
                 }
             }
         }
@@ -330,7 +358,7 @@ public actor JunkCleanerService {
     }
     
     // MARK: - App Leftovers (Safe Orphan Directory Scanner)
-    private func scanAppLeftovers() async -> [JunkFileItem] {
+    private func scanAppLeftovers(_ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         
         // 1. Gather all installed bundle identifiers & app names
@@ -368,7 +396,7 @@ public actor JunkCleanerService {
         // 2. Safely inspect ~/Library/Application Support
         let appSupportURL = homeDirectory.appendingPathComponent("Library/Application Support")
         if let appSupportDirs = try? fileManager.contentsOfDirectory(at: appSupportURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
-            for dir in appSupportDirs {
+            for dir in appSupportDirs where !flag.isCancelled {
                 let dirName = dir.lastPathComponent.lowercased()
                 
                 // Never flag essential tools or system directories
@@ -388,7 +416,7 @@ public actor JunkCleanerService {
                 }
                 
                 if !isInstalled {
-                    let size = calculateSize(at: dir)
+                    let size = FileSizeCalculator.size(of: dir, cancellation: flag)
                     if size > 15 * 1024 * 1024 { // Only include notable items > 15 MB
                         items.append(JunkFileItem(
                             path: dir.path,
@@ -417,17 +445,11 @@ public actor JunkCleanerService {
             let progress = Double(index) / max(1.0, totalItems)
             progressHandler?(item.name, progress)
             
-            let url = URL(fileURLWithPath: item.path)
-            
-            do {
-                let res = try SafeOperationExecutor.removeFile(at: url, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
-                if res.success {
-                    totalFreed += (res.bytesFreed > 0 ? res.bytesFreed : item.sizeBytes)
-                    deleted += 1
-                } else {
-                    failed += 1
-                }
-            } catch {
+            let outcome = await Self.remove(path: item.path, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
+            if case .success(let res) = outcome, res.success {
+                totalFreed += (res.bytesFreed > 0 ? res.bytesFreed : item.sizeBytes)
+                deleted += 1
+            } else {
                 failed += 1
             }
         }
@@ -437,16 +459,17 @@ public actor JunkCleanerService {
     }
     
     // MARK: - Optimized Directory Sizing
-    private func scanSubdirectories(in folderURL: URL, category: JunkCategoryType) -> [JunkFileItem] {
+    private func scanSubdirectories(in folderURL: URL, category: JunkCategoryType, _ flag: CancellationFlag) -> [JunkFileItem] {
         var items: [JunkFileItem] = []
         guard let contents = try? fileManager.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else {
             return []
         }
         
         for url in contents {
+            if flag.isCancelled { break }
             guard PathProtectionPolicy.isCleanableCachePath(url.path) else { continue }
             
-            let size = calculateSize(at: url)
+            let size = FileSizeCalculator.size(of: url, cancellation: flag)
             if size > 1024 * 1024 { // Only include items > 1MB
                 items.append(JunkFileItem(
                     path: url.path,
@@ -462,33 +485,8 @@ public actor JunkCleanerService {
         return items.sorted { $0.sizeBytes > $1.sizeBytes }
     }
     
-    public func calculateSize(at url: URL) -> Int64 {
-        var isDir: ObjCBool = false
-        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDir) else { return 0 }
-        
-        if !isDir.boolValue {
-            if let attrs = try? fileManager.attributesOfItem(atPath: url.path),
-               let size = attrs[.size] as? NSNumber {
-                return size.int64Value
-            }
-            return 0
-        }
-        
-        var totalSize: Int64 = 0
-        guard let enumerator = fileManager.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
-            options: [.skipsPackageDescendants, .skipsHiddenFiles]
-        ) else { return 0 }
-        
-        for case let fileURL as URL in enumerator {
-            if let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
-               values.isRegularFile == true,
-               let fileSize = values.fileSize {
-                totalSize += Int64(fileSize)
-            }
-        }
-        
-        return totalSize
+    /// Kept for API compatibility; prefer `FileSizeCalculator` directly.
+    public func calculateSize(at url: URL) async -> Int64 {
+        await FileSizeCalculator.measure(url)
     }
 }

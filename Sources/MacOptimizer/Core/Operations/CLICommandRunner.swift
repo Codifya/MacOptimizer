@@ -111,11 +111,8 @@ public struct CLICommandRunner {
             let confirmation = SafeOperationExecutor.confirm(plan)
             let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation)
             if includeTrash {
-                do {
-                    try SafeOperationExecutor.emptyTrash(trashItems.map { URL(fileURLWithPath: $0.path) }, confirmation: confirmation)
-                } catch {
-                    print("Çöp Kutusu boşaltılamadı: \(error.localizedDescription)")
-                }
+                let result = SafeOperationExecutor.emptyTrash(trashItems.map { URL(fileURLWithPath: $0.path) }, confirmation: confirmation)
+                print("Çöp Kutusu: silinen \(result.removedCount), atlanan \(result.skippedCount), boşalan \(ByteFormatter.format(result.bytesFreed)).")
             }
             print("✨ Temizlik tamamlandı! \(ByteFormatter.format(result.totalFreedBytes)) alan başarıyla geri kazanıldı.")
         }

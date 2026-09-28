@@ -3,6 +3,42 @@ import XCTest
 
 final class MacOptimizerTests: XCTestCase {
 
+    func testEmptyTrashRemovesSymlinkEntryButPreservesTarget() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let trash = root.appendingPathComponent("Trash")
+        let outside = root.appendingPathComponent("outside.txt")
+        let link = trash.appendingPathComponent("link")
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        try Data("target".utf8).write(to: outside)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = SafeOperationExecutor.emptyTrash([link], confirmation: SafeOperationExecutor.confirm(CleaningPlan()), trashDirectory: trash)
+
+        XCTAssertEqual(result.removedCount, 1)
+        XCTAssertEqual(result.skippedCount, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: link.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+    }
+
+    func testEmptyTrashSkipsEntryOutsideTrashAndRemovesNormalFile() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let trash = root.appendingPathComponent("Trash")
+        let normal = trash.appendingPathComponent("normal.txt")
+        let outside = root.appendingPathComponent("outside.txt")
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        try Data("normal".utf8).write(to: normal)
+        try Data("keep".utf8).write(to: outside)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = SafeOperationExecutor.emptyTrash([normal, outside], confirmation: SafeOperationExecutor.confirm(CleaningPlan()), trashDirectory: trash)
+
+        XCTAssertEqual(result.removedCount, 1)
+        XCTAssertEqual(result.skippedCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: normal.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+    }
+
     func testExecutorRefusesDestructivePathWithoutConfirmation() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

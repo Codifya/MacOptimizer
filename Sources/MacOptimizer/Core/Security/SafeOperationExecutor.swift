@@ -29,6 +29,12 @@ public struct OperationExecutionResult: Sendable {
 
 /// Atomic, policy-governed executor for all filesystem, process, and maintenance operations.
 public struct SafeOperationExecutor: Sendable {
+    public struct TrashResult: Sendable {
+        public let removedCount: Int
+        public let skippedCount: Int
+        public let bytesFreed: Int64
+    }
+
     public struct Confirmation: Sendable {
         fileprivate init() {}
     }
@@ -36,15 +42,34 @@ public struct SafeOperationExecutor: Sendable {
     /// Created only by the UI after presenting the reviewed plan.
     public static func confirm(_ plan: CleaningPlan) -> Confirmation { Confirmation() }
 
-    public static func emptyTrash(_ items: [URL], confirmation: Confirmation) throws {
-        let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash").resolvingSymlinksInPath().standardizedFileURL
+    public static func emptyTrash(
+        _ items: [URL],
+        confirmation: Confirmation,
+        trashDirectory: URL? = nil
+    ) -> TrashResult {
+        let trash = (trashDirectory ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")).resolvingSymlinksInPath().standardizedFileURL
+        let trashPath = trash.path.hasSuffix("/") ? trash.path : trash.path + "/"
+        var removedCount = 0
+        var skippedCount = 0
+        var bytesFreed: Int64 = 0
+        let fm = FileManager.default
         for item in items {
-            let target = item.resolvingSymlinksInPath().standardizedFileURL
-            guard target.path.hasPrefix(trash.path + "/"), target == item.resolvingSymlinksInPath().standardizedFileURL else {
-                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Yalnızca doğrulanmış Çöp Sepeti öğeleri boşaltılabilir."])
+            let entry = item.standardizedFileURL
+            let parent = entry.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+            guard !item.pathComponents.contains(".."), (parent == trash || parent.path.hasPrefix(trashPath)), entry != trash else {
+                skippedCount += 1
+                continue
             }
-            try FileManager.default.removeItem(at: target)
+            do {
+                let size = (try? fm.attributesOfItem(atPath: entry.path)[.size] as? Int64) ?? 0
+                try fm.removeItem(at: entry)
+                removedCount += 1
+                bytesFreed += size
+            } catch {
+                skippedCount += 1
+            }
         }
+        return TrashResult(removedCount: removedCount, skippedCount: skippedCount, bytesFreed: bytesFreed)
     }
 
     static func stillResolvesTo(_ url: URL, expected: URL) -> Bool {

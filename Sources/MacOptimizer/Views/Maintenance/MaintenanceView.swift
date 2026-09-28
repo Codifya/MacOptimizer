@@ -134,13 +134,9 @@ public struct MaintenanceView: View {
         .alert("Çöp Kutusu kalıcı olarak boşaltılsın mı?", isPresented: $trashConfirmation) {
             Button("Vazgeç", role: .cancel) {}
             Button("Kalıcı Olarak Sil", role: .destructive) {
-                do {
-                    try SafeOperationExecutor.emptyTrash(pendingTrash, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
-                    appState.refreshMetrics()
-                    appState.showNotification(message: "Çöp Kutusu boşaltıldı (\(ByteFormatter.format(pendingTrashBytes))).")
-                } catch {
-                    appState.showNotification(message: "Çöp Kutusu boşaltılamadı: \(error.localizedDescription)")
-                }
+                let result = SafeOperationExecutor.emptyTrash(pendingTrash, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
+                appState.refreshMetrics()
+                appState.showNotification(message: "Silinen: \(result.removedCount), atlanan: \(result.skippedCount), boşalan: \(ByteFormatter.format(result.bytesFreed)).")
             }
         } message: {
             Text("\(pendingTrash.count) öğe, toplam \(ByteFormatter.format(pendingTrashBytes)). Bu işlem geri alınamaz.")

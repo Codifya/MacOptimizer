@@ -14,7 +14,7 @@ public struct BatteryAnalyticsCard: View {
                             .font(.system(size: 16))
                             .foregroundColor(stats.isCharging ? .green : .blue)
                         
-                        Text("Pil Sağlığı & Güç Telemetrisi")
+                        Text(l10n: "Battery Health & Power Telemetry", table: .dashboard)
                             .font(.system(size: 13, weight: .bold))
                     }
                     
@@ -60,7 +60,7 @@ public struct BatteryAnalyticsCard: View {
                     // Detailed Diagnostics
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Maksimum Kapasite:")
+                            Text(l10n: "Maximum Capacity:", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -70,21 +70,21 @@ public struct BatteryAnalyticsCard: View {
                         }
                         
                         HStack {
-                            Text("Pil Döngü Sayısı:")
+                            Text(l10n: "Battery Cycle Count:", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(stats.cycleCount) Döngü")
+                            Text(L10n.string("%lld cycles", table: .dashboard, Int64(stats.cycleCount)))
                                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         }
                         
                         HStack {
-                            Text("Pil Sıcaklığı:")
+                            Text(l10n: "Battery Temperature:", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             Spacer()
                             HStack(spacing: 4) {
-                                Text(String(format: "%.1f °C", stats.temperatureCelsius))
+                                Text(L10n.string("%.1f °C", table: .dashboard, stats.temperatureCelsius))
                                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                                     .foregroundColor(stats.isOverheating ? .red : .primary)
                                 
@@ -97,7 +97,7 @@ public struct BatteryAnalyticsCard: View {
                         }
                         
                         HStack {
-                            Text("Durum:")
+                            Text(l10n: "Condition:", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             Spacer()

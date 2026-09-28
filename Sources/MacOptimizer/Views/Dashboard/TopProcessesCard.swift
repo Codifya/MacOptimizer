@@ -10,13 +10,13 @@ public struct TopProcessesCard: View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("En Çok Bellek Kullananlar", systemImage: "flame.fill")
+                    Label(L10n.string("Top Memory Consumers", table: .dashboard), systemImage: "flame.fill")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    Button("Tümünü Gör →") {
+                    Button(L10n.string("View All →", table: .dashboard)) {
                         onNavigateToMemory()
                     }
                     .buttonStyle(.plain)
@@ -25,7 +25,7 @@ public struct TopProcessesCard: View {
                 }
                 
                 if processes.isEmpty {
-                    Text("İşlemler taranıyor...")
+                    Text(l10n: "Scanning processes...", table: .dashboard)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                         .padding(.vertical, 8)
@@ -45,7 +45,7 @@ public struct TopProcessesCard: View {
                                         .font(.system(size: 13, weight: .medium))
                                         .lineLimit(1)
                                     
-                                    Text("PID: \(proc.pid)")
+                                    Text(L10n.string("PID: %lld", table: .dashboard, Int64(proc.pid)))
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
                                 }
@@ -66,7 +66,7 @@ public struct TopProcessesCard: View {
                                     Image(systemName: "lock.shield.fill")
                                         .foregroundColor(.secondary.opacity(0.4))
                                         .font(.system(size: 13))
-                                        .help("macOS Korunan Sistem Süreci (Sonlandırılamaz)")
+                                        .help(L10n.string("Protected macOS system process (cannot be terminated)", table: .dashboard))
                                 } else {
                                     Button {
                                         onKill(proc.pid)
@@ -76,7 +76,7 @@ public struct TopProcessesCard: View {
                                             .font(.system(size: 15))
                                     }
                                     .buttonStyle(.plain)
-                                    .help("İşlemi Kapat (PID: \(proc.pid))")
+                                    .help(L10n.string("Terminate process (PID: %lld)", table: .dashboard, Int64(proc.pid)))
                                 }
                             }
                             .padding(.vertical, 2)

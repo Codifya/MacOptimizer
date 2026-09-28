@@ -175,7 +175,7 @@ public struct DashboardView: View {
                     Text("Mac'inizi Tek Tıkla Optimize Edin")
                         .font(.system(size: 15, weight: .bold))
                     
-                    Text("RAM önbelleğini boşaltır, sistem ve tarayıcı önbelleklerini temizler, ağ bağlantılarını yeniler.")
+                    Text("Sistem ve tarayıcı önbelleklerini temizler, ağ bağlantılarını yeniler.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)

@@ -21,7 +21,6 @@ public struct SettingsView: View {
     @AppStorage("MacOptimizer_IncludeRunningAppNames") private var includeRunningAppNames = false
     
     @State private var isWatchdogActive: Bool = true
-    @State private var autoPurgeRAM: Bool = true
     @State private var ramThreshold: Double = 85.0
     @State private var notifyOnAnomalies: Bool = true
     @State private var cpuRunawayThreshold: Double = 90.0
@@ -97,7 +96,6 @@ public struct SettingsView: View {
             modelSelectionMode = appState.nimConfig.isManualEntry ? .manual : .picker
             
             isWatchdogActive = appState.autonomousConfig.isWatchdogActive
-            autoPurgeRAM = appState.autonomousConfig.autoPurgeRAMOnSpike
             ramThreshold = appState.autonomousConfig.ramThresholdPercent
             notifyOnAnomalies = appState.autonomousConfig.notifyOnAnomalies
             cpuRunawayThreshold = appState.autonomousConfig.cpuRunawayThresholdPercent
@@ -328,26 +326,19 @@ public struct SettingsView: View {
                         }
                 }
                 
-                Toggle("RAM baskısı yükseldiğinde otomatik olarak belleği boşalt (Auto-Heal)", isOn: $autoPurgeRAM)
-                    .font(.system(size: 12))
-                    .onChange(of: autoPurgeRAM) { _, _ in saveAutonomous() }
-                
-                if autoPurgeRAM {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("RAM Otomatik Müdahale Eşiği:")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Text("%\(Int(ramThreshold))")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.blue)
-                        }
-                        
-                        Slider(value: $ramThreshold, in: 70...95, step: 5)
-                            .onChange(of: ramThreshold) { _, _ in saveAutonomous() }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Bellek Baskısı Uyarı Eşiği:")
+                            .font(.system(size: 12))
+                        Spacer()
+                        Text("%\(Int(ramThreshold))")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.blue)
                     }
-                    .padding(.leading, 16)
+                    Slider(value: $ramThreshold, in: 70...95, step: 5)
+                        .onChange(of: ramThreshold) { _, _ in saveAutonomous() }
                 }
+                .padding(.leading, 16)
                 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -419,7 +410,6 @@ public struct SettingsView: View {
     private func saveAutonomous() {
         var conf = appState.autonomousConfig
         conf.isWatchdogActive = isWatchdogActive
-        conf.autoPurgeRAMOnSpike = autoPurgeRAM
         conf.ramThresholdPercent = ramThreshold
         conf.cpuRunawayThresholdPercent = cpuRunawayThreshold
         conf.notifyOnAnomalies = notifyOnAnomalies

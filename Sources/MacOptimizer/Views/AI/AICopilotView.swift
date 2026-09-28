@@ -262,10 +262,6 @@ public struct AICopilotView: View {
                 // Quick Suggestion Chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        QuickChip(text: "RAM'i Boşalt") {
-                            chatInputText = "Mac'imin RAM belleğini boşalt ve optimize et."
-                            sendMessage()
-                        }
                         QuickChip(text: "Neden Mac'im ısınıyor?") {
                             chatInputText = "Mac'imin işlemci ve bellek durumunu analiz et, ısınma sebebi var mı?"
                             sendMessage()

@@ -60,7 +60,7 @@ public actor AutonomousGuardService {
         if ramPercent >= config.ramThresholdPercent || memory.pressureLevel == .critical {
             generatedAlerts.append(AutonomousAlert(
                 title: "Yüksek Bellek Baskısı Uyarısı",
-                message: "RAM kullanımı %\(Int(ramPercent)) seviyesine ulaştı. Bellek baskısını azaltmak için listelenen yoğun uygulamaları kapatın.",
+                message: "RAM kullanımı %\(Int(ramPercent)) seviyesine ulaştı. Bellek baskısını azaltmak için en çok bellek kullanan uygulamaları kapatmayı deneyin.",
                 type: .memorySpike,
                 timestamp: now,
                 isResolved: false,

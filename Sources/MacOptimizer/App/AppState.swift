@@ -144,10 +144,6 @@ public final class AppState: ObservableObject {
     @Published public var latestReport: OptimizationReport?
     @Published public var optimizationHistory: [OptimizationReport] = []
     
-    // Memory Purge State
-    @Published public var isPurgingMemory = false
-    @Published public var memoryPurgeResult: MemoryOptimizerService.OptimizationResult?
-    
     // Security & Privacy Audit State
     @Published public var securityReport: SecurityAuditReport?
     @Published public var isLoadingSecurityAudit = false
@@ -183,9 +179,9 @@ public final class AppState: ObservableObject {
         if chatMessages.isEmpty {
             chatMessages.append(AIChatMessage(
                 role: .assistant,
-                content: "Merhaba! Ben MacOptimizer Yapay Zeka Asistanınız. Sisteminizin durumunu analiz edebilir, RAM boşaltabilir, gereksiz dosyaları temizleyebilir ve uygulama güncellemelerinizi denetleyebilirim. Size nasıl yardımcı olabilirim?",
+                content: "Merhaba! Ben MacOptimizer Yapay Zeka Asistanınız. Sisteminizin durumunu analiz edebilir, gereksiz dosyaları temizleyebilir ve uygulama güncellemelerinizi denetleyebilirim. Size nasıl yardımcı olabilirim?",
                 actions: [
-                    AIAction(title: "Sistem Durumunu Analiz Et", type: .purgeRAM),
+                    AIAction(title: "Sistem Durumunu Analiz Et", type: .analyzeSystem),
                     AIAction(title: "Gereksiz Dosyaları Tara", type: .scanJunk)
                 ]
             ))
@@ -381,8 +377,8 @@ public final class AppState: ObservableObject {
     
     public func executeAIAction(_ action: AIAction) {
         switch action.type {
-        case .purgeRAM:
-            purgeRAM()
+        case .analyzeSystem:
+            runAIHealthAnalysis()
         case .scanJunk:
             selectedTab = .junkCleaner
             scanJunk()
@@ -461,32 +457,6 @@ public final class AppState: ObservableObject {
     
     public func clearAutonomousAlerts() {
         autonomousAlerts.removeAll()
-    }
-    
-    // MARK: - RAM Freeing / Optimization
-    public func purgeRAM() {
-        guard !isPurgingMemory else { return }
-        isPurgingMemory = true
-        
-        Task {
-            let result = await MemoryOptimizerService.shared.purgeMemory()
-            await MainActor.run {
-                self.isPurgingMemory = false
-                self.memoryPurgeResult = result
-
-                self.showNotification(message: result.message)
-                if result.freedBytes > 0 {
-                    let report = OptimizationReport(
-                        title: "RAM Bellek Boşaltma",
-                        freedMemoryBytes: result.freedBytes,
-                        freedDiskBytes: 0,
-                        details: [result.message],
-                        durationSeconds: result.durationSeconds
-                    )
-                    self.addReport(report)
-                }
-            }
-        }
     }
     
     public func killProcess(pid: Int32, force: Bool = false) {

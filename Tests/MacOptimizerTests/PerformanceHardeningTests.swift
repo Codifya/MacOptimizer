@@ -354,7 +354,7 @@ final class PerformanceHardeningTests: XCTestCase {
     func testCancelledDuplicateScanReturnsPromptly() {
         let flag = CancellationFlag()
         flag.cancel()
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = URL(fileURLWithPath: "/private/tmp/macopt-004-test-home")
         let start = Date()
         let groups = DuplicateFileFinderService.findDuplicatesSync(in: [home], minSizeBytes: 1, flag: flag, progressHandler: nil)
         XCTAssertTrue(groups.isEmpty)

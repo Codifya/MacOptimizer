@@ -3,6 +3,13 @@ import XCTest
 
 final class MacOptimizerTests: XCTestCase {
 
+    func testAutonomousConfigDecodesLegacyPurgeSetting() throws {
+        let legacyJSON = #"{"isWatchdogActive":true,"autoPurgeRAMOnSpike":false,"ramThresholdPercent":85,"autoCleanTemporaryLogsWeekly":true,"notifyOnAnomalies":true,"scanIntervalSeconds":5,"cpuRunawayThresholdPercent":90}"#.data(using: .utf8)!
+        let config = try JSONDecoder().decode(AutonomousConfig.self, from: legacyJSON)
+        XCTAssertTrue(config.isWatchdogActive)
+        XCTAssertEqual(config.ramThresholdPercent, 85)
+    }
+
     func testEmptyTrashRemovesSymlinkEntryButPreservesTarget() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let trash = root.appendingPathComponent("Trash")
@@ -480,6 +487,9 @@ final class MacOptimizerTests: XCTestCase {
         
         XCTAssertFalse(insights.isEmpty)
         XCTAssertTrue(insights.contains(where: { $0.severity == .critical }))
+        let memoryInsight = insights.first(where: { $0.category == "RAM" })
+        XCTAssertTrue(memoryInsight?.actions.isEmpty == true)
+        XCTAssertTrue(memoryInsight?.summary.contains("uygulamaları kapatmayı") == true)
     }
     
     func testNIMRequestPayloadDisclosureAndHistoryLimit() throws {
@@ -616,7 +626,6 @@ final class MacOptimizerTests: XCTestCase {
         
         var config = AutonomousConfig()
         config.isWatchdogActive = true
-        config.autoPurgeRAMOnSpike = false
         
         let alerts = await guardService.evaluateCycle(
             memory: mem,

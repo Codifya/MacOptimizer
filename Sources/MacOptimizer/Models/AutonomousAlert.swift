@@ -73,7 +73,6 @@ public struct AutonomousAlert: Identifiable, Codable, Sendable, Equatable {
 /// Configuration settings for the autonomous watchdog and auto-healing engine
 public struct AutonomousConfig: Codable, Sendable, Equatable {
     public var isWatchdogActive: Bool
-    public var autoPurgeRAMOnSpike: Bool
     public var ramThresholdPercent: Double
     public var autoCleanTemporaryLogsWeekly: Bool
     public var notifyOnAnomalies: Bool
@@ -82,7 +81,6 @@ public struct AutonomousConfig: Codable, Sendable, Equatable {
     
     public init(
         isWatchdogActive: Bool = true,
-        autoPurgeRAMOnSpike: Bool = true,
         ramThresholdPercent: Double = 85.0,
         autoCleanTemporaryLogsWeekly: Bool = true,
         notifyOnAnomalies: Bool = true,
@@ -90,7 +88,6 @@ public struct AutonomousConfig: Codable, Sendable, Equatable {
         cpuRunawayThresholdPercent: Double = 90.0
     ) {
         self.isWatchdogActive = isWatchdogActive
-        self.autoPurgeRAMOnSpike = autoPurgeRAMOnSpike
         self.ramThresholdPercent = ramThresholdPercent
         self.autoCleanTemporaryLogsWeekly = autoCleanTemporaryLogsWeekly
         self.notifyOnAnomalies = notifyOnAnomalies

@@ -15,6 +15,15 @@ public struct SecurityPostureItem: Identifiable, Sendable, Equatable {
         case critical = "Kritik"
         case warning  = "Uyarı"
         case secure   = "Güvenli"
+
+        /// Localized display label. Raw values are kept stable and must not be shown in the UI.
+        public var localizedTitle: String {
+            switch self {
+            case .critical: return L10n.string("Critical", table: .services)
+            case .warning:  return L10n.string("Warning", table: .services)
+            case .secure:   return L10n.string("Secure", table: .services)
+            }
+        }
         
         public var badgeColor: String {
             switch self {
@@ -34,10 +43,10 @@ public struct SecurityAuditReport: Sendable, Equatable {
     
     public var ratingDescription: String {
         switch score {
-        case 90...100: return "Mükemmel Güvenlik Kalkanı"
-        case 70..<90:  return "İyi / Standart Güvenlik"
-        case 50..<70:  return "Geliştirilmesi Gereken Ayarlar"
-        default:       return "Kritik Güvenlik Riski"
+        case 90...100: return L10n.string("Excellent Security Shield", table: .services)
+        case 70..<90:  return L10n.string("Good / Standard Security", table: .services)
+        case 50..<70:  return L10n.string("Settings Need Improvement", table: .services)
+        default:       return L10n.string("Critical Security Risk", table: .services)
         }
     }
     
@@ -76,25 +85,25 @@ public actor PrivacyAuditService {
         if isSIPEnabled == true {
             items.append(SecurityPostureItem(
                 id: "sip",
-                title: "System Integrity Protection (SIP)",
-                detail: "Sistem dosyalarını ve çekirdek seviyesi izinsiz değişiklikleri engeller.",
+                title: L10n.string("System Integrity Protection (SIP)", table: .services),
+                detail: L10n.string("Prevents unauthorized changes to system files and the kernel.", table: .services),
                 isSecure: true,
-                statusText: "Aktif (Korumalı)",
-                recommendation: "SIP koruması devrede. Sistemin temel bütünlüğü güvende.",
+                statusText: L10n.string("Active (Protected)", table: .services),
+                recommendation: L10n.string("SIP protection is active. The system core is secure.", table: .services),
                 severity: .secure
             ))
         } else if isSIPEnabled == false {
             items.append(SecurityPostureItem(
                 id: "sip",
-                title: "System Integrity Protection (SIP)",
-                detail: "SIP devre dışı bırakılmış. Kötü amaçlı yazılımlar kök sistem dosyalarına müdahale edebilir.",
+                title: L10n.string("System Integrity Protection (SIP)", table: .services),
+                detail: L10n.string("SIP is disabled. Malware may tamper with root system files.", table: .services),
                 isSecure: false,
-                statusText: "Devre Dışı (Tehlikeli)",
-                recommendation: "Mac'inizi Kurtarma Modunda (Recovery) başlatıp 'csrutil enable' çalıştırarak etkinleştirin.",
+                statusText: L10n.string("Disabled (Dangerous)", table: .services),
+                recommendation: L10n.string("Enable it by starting your Mac in Recovery Mode and running 'csrutil enable'.", table: .services),
                 severity: .critical
             ))
         } else {
-            items.append(Self.unknownItem(id: "sip", title: "System Integrity Protection (SIP)"))
+            items.append(Self.unknownItem(id: "sip", title: L10n.string("System Integrity Protection (SIP)", table: .services)))
         }
         
         // 2. Gatekeeper (Uygulama İndirme & Kod İmza Doğrulama) - 25 Puan
@@ -103,25 +112,25 @@ public actor PrivacyAuditService {
         if isGatekeeperEnabled == true {
             items.append(SecurityPostureItem(
                 id: "gatekeeper",
-                title: "Apple Gatekeeper Güvenliği",
-                detail: "Yalnızca Apple onaylı ve Notarized imzalı güvenilir uygulamaların çalışmasına izin verir.",
+                title: L10n.string("Apple Gatekeeper Security", table: .services),
+                detail: L10n.string("Allows only trusted apps approved by Apple and signed with notarization to run.", table: .services),
                 isSecure: true,
-                statusText: "Aktif (Doğrulama Açık)",
-                recommendation: "İmzasız ve doğrulanmamış ikili dosyalar engelleniyor.",
+                statusText: L10n.string("Active (Verification On)", table: .services),
+                recommendation: L10n.string("Unsigned and unverified binaries are blocked.", table: .services),
                 severity: .secure
             ))
         } else if isGatekeeperEnabled == false {
             items.append(SecurityPostureItem(
                 id: "gatekeeper",
-                title: "Apple Gatekeeper Güvenliği",
-                detail: "Gatekeeper kapalı. İmzasız veya kötü amaçlı ikili dosyalar uyarı vermeden çalışabilir.",
+                title: L10n.string("Apple Gatekeeper Security", table: .services),
+                detail: L10n.string("Gatekeeper is off. Unsigned or malicious binaries may run without warning.", table: .services),
                 isSecure: false,
-                statusText: "Devre Dışı",
-                recommendation: "Terminalde 'sudo spctl --master-enable' çalıştırarak Gatekeeper'ı tekrar açın.",
+                statusText: L10n.string("Disabled", table: .services),
+                recommendation: L10n.string("Re-enable Gatekeeper by running 'sudo spctl --master-enable' in Terminal.", table: .services),
                 severity: .critical
             ))
         } else {
-            items.append(Self.unknownItem(id: "gatekeeper", title: "Apple Gatekeeper Güvenliği"))
+            items.append(Self.unknownItem(id: "gatekeeper", title: L10n.string("Apple Gatekeeper Security", table: .services)))
         }
         
         // 3. macOS Güvenlik Duvarı (Firewall) - 25 Puan
@@ -133,25 +142,25 @@ public actor PrivacyAuditService {
         if isFirewallEnabled == true {
             items.append(SecurityPostureItem(
                 id: "firewall",
-                title: "macOS Uygulama Güvenlik Duvarı",
-                detail: "Yetkisiz gelen ağ bağlantı isteklerini filtreler ve engeller.",
+                title: L10n.string("macOS Application Firewall", table: .services),
+                detail: L10n.string("Filters and blocks unauthorized incoming network connection requests.", table: .services),
                 isSecure: true,
-                statusText: "Aktif (Filtreleme Devrede)",
-                recommendation: "Güvenlik duvarı gelen yetkisiz port taramalarını engelliyor.",
+                statusText: L10n.string("Active (Filtering On)", table: .services),
+                recommendation: L10n.string("The firewall is blocking unauthorized incoming port scans.", table: .services),
                 severity: .secure
             ))
         } else if isFirewallEnabled == false {
             items.append(SecurityPostureItem(
                 id: "firewall",
-                title: "macOS Uygulama Güvenlik Duvarı",
-                detail: "Sistem Güvenlik Duvarı kapalı. Halka açık Wi-Fi ağlarında risk oluşturabilir.",
+                title: L10n.string("macOS Application Firewall", table: .services),
+                detail: L10n.string("The system firewall is off. This may pose a risk on public Wi-Fi networks.", table: .services),
                 isSecure: false,
-                statusText: "Kapalı",
-                recommendation: "Sistem Ayarları > Ağ > Güvenlik Duvarı bölümünden etkinleştirmeniz önerilir.",
+                statusText: L10n.string("Off", table: .services),
+                recommendation: L10n.string("You should enable it in System Settings > Network > Firewall.", table: .services),
                 severity: .warning
             ))
         } else {
-            items.append(Self.unknownItem(id: "firewall", title: "macOS Uygulama Güvenlik Duvarı"))
+            items.append(Self.unknownItem(id: "firewall", title: L10n.string("macOS Application Firewall", table: .services)))
         }
         
         // 4. Erişilebilirlik & Güvenlik İzinleri (Accessibility / TCC) - 20 Puan
@@ -159,21 +168,21 @@ public actor PrivacyAuditService {
         if isTrusted {
             items.append(SecurityPostureItem(
                 id: "accessibility",
-                title: "Sistem Yardımcı Program İzinleri",
-                detail: "Uygulama tam sistem optimizasyonu ve pencere yönetimi yetkisine sahip.",
+                title: L10n.string("System Utility Permissions", table: .services),
+                detail: L10n.string("The app has permission for full system optimization and window management.", table: .services),
                 isSecure: true,
-                statusText: "Onaylandı",
-                recommendation: "Gerekli erişim izinleri başarıyla yapılandırılmış.",
+                statusText: L10n.string("Approved", table: .services),
+                recommendation: L10n.string("Required access permissions are configured successfully.", table: .services),
                 severity: .secure
             ))
         } else {
             items.append(SecurityPostureItem(
                 id: "accessibility",
-                title: "Erişilebilirlik İzinleri",
-                detail: "Standart kullanıcı izinlerinde çalışıyor (Sandbox / Non-Privileged).",
+                title: L10n.string("Accessibility Permissions", table: .services),
+                detail: L10n.string("Running with standard user permissions (Sandbox / Non-Privileged).", table: .services),
                 isSecure: true,
-                statusText: "Standart İzin",
-                recommendation: "İleri düzey pencere otomasyonu için Sistem Ayarları'ndan izin verebilirsiniz.",
+                statusText: L10n.string("Standard Permission", table: .services),
+                recommendation: L10n.string("You can grant permission in System Settings for advanced window automation.", table: .services),
                 severity: .secure
             ))
         }
@@ -191,7 +200,7 @@ public actor PrivacyAuditService {
     }
 
     private static func unknownItem(id: String, title: String) -> SecurityPostureItem {
-        SecurityPostureItem(id: id, title: title, detail: "Bu ayarın durumu okunamadı.", isSecure: false,
-                            statusText: "Bilinmiyor", recommendation: "Durumu macOS Sistem Ayarları'ndan doğrulayın.", severity: .warning)
+        SecurityPostureItem(id: id, title: title, detail: L10n.string("Could not read the status of this setting.", table: .services), isSecure: false,
+                            statusText: L10n.string("Unknown", table: .services), recommendation: L10n.string("Verify the status in macOS System Settings.", table: .services), severity: .warning)
     }
 }

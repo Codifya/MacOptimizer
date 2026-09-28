@@ -48,7 +48,7 @@ public struct SandboxedCommandRunner: Sendable {
         return CommandExecutionResult(
             exitCode: output.exitCode,
             stdout: output.standardOutput,
-            stderr: output.exitCode == -1 ? "Çalıştırma hatası: \(output.standardError)" : output.standardError,
+            stderr: output.exitCode == -1 ? L10n.string("Execution error: %@", table: .services, output.standardError) : output.standardError,
             durationMs: output.durationMs
         )
     }

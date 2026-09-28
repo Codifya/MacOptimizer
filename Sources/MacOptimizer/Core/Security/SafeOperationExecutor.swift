@@ -91,15 +91,15 @@ public struct SafeOperationExecutor: Sendable {
             throw NSError(
                 domain: "SafeOperationExecutor",
                 code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "Güvenlik Engeli: \(reason)"]
+                userInfo: [NSLocalizedDescriptionKey: L10n.string("Security Block: %@", table: .services, reason)]
             )
             
         case .requiresConfirmation(_, _) where confirmation == nil:
-            throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Bu işlem için kullanıcı onayı gerekiyor."])
+            throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: L10n.string("User confirmation is required for this operation.", table: .services)])
         case .allowed(let risk), .requiresConfirmation(let risk, _):
             let currentURL = url.resolvingSymlinksInPath().standardizedFileURL
             guard Self.stillResolvesTo(url, expected: canonicalURL), !PathProtectionPolicy.isForbiddenPath(currentURL.path, homeDirectory: policyHomeDirectory) else {
-                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Dosya yolu doğrulamadan sonra değişti."])
+                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: L10n.string("The file path changed after validation.", table: .services)])
             }
             let fm = FileManager.default
             guard fm.fileExists(atPath: canonicalPath) else {
@@ -107,7 +107,7 @@ public struct SafeOperationExecutor: Sendable {
                     target: canonicalPath,
                     risk: risk,
                     success: true,
-                    message: "Dosya zaten mevcut değil."
+                    message: L10n.string("The file does not exist.", table: .services)
                 )
             }
             
@@ -135,7 +135,7 @@ public struct SafeOperationExecutor: Sendable {
                 target: canonicalPath,
                 risk: risk,
                 success: true,
-                message: "Öğe başarıyla temizlendi.",
+                message: L10n.string("Item cleaned successfully.", table: .services),
                 bytesFreed: fileSize
             )
         }
@@ -162,14 +162,14 @@ public struct SafeOperationExecutor: Sendable {
                     target: "\(name) (PID: \(pid))",
                     risk: risk,
                     success: true,
-                    message: "\(name) işlemi sonlandırıldı."
+                    message: L10n.string("%@ process terminated.", table: .services, name)
                 )
             } else {
                 return OperationExecutionResult(
                     target: "\(name) (PID: \(pid))",
                     risk: risk,
                     success: false,
-                    message: "İşlem sonlandırılamadı (Hata Kodu: \(errno))."
+                    message: L10n.string("Could not terminate process (Error Code: %lld).", table: .services, Int64(errno))
                 )
             }
         }

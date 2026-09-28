@@ -1,1 +1,23 @@
-{}
+"Smart Diagnostics & Report" = "Akıllı Teşhis ve Rapor";
+"AI Copilot Chat" = "AI Copilot Sohbeti";
+"Terminate this process?" = "Bu işlem sonlandırılsın mı?";
+"Cancel" = "Vazgeç";
+"Terminate Normally" = "Normal Olarak Sonlandır";
+"PID: %lld. SIGTERM will be sent first." = "PID: %lld. Önce SIGTERM gönderilecek.";
+"AI Advisor & Copilot" = "Yapay Zeka Danışmanı ve Copilot";
+"NVIDIA NIM: %@" = "NVIDIA NIM: %@";
+"Local AI Engine" = "Yerel AI Motoru";
+"Analyze your Mac’s performance, memory pressure, and disk usage with AI." = "Mac’inizin performansını, bellek baskısını ve disk kullanımını yapay zeka ile analiz edin.";
+"Analyzing..." = "Analiz Ediliyor...";
+"Analyze System Again" = "Sistemi Yeniden Analiz Et";
+"Reviewing system telemetry..." = "Sistem telemetrisi inceleniyor...";
+"MacOptimizer AI" = "MacOptimizer AI";
+"You" = "Siz";
+"Preparing a response..." = "Yanıt hazırlanıyor...";
+"Why is my Mac overheating?" = "Mac’im neden ısınıyor?";
+"Analyze my Mac’s CPU and memory and check what may be causing it to overheat." = "Mac’imin işlemci ve bellek durumunu analiz et, ısınma sebebini bul.";
+"Scan for Junk Files" = "Gereksiz Dosyaları Tara";
+"Scan for unnecessary caches and logs taking up disk space." = "Disk alanımı dolduran gereksiz önbellek ve günlükleri tara.";
+"Top 3 Resource-Using Processes" = "En Çok Kaynak Kullanan 3 Süreç";
+"List the top three apps currently using the most RAM and CPU." = "Şu anda en çok RAM ve CPU kullanan ilk 3 uygulamayı listele.";
+"Ask AI a question or give a command..." = "Yapay zekaya soru sorun veya komut verin...";

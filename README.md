@@ -1,6 +1,6 @@
 # MacOptimizer Pro
 
-> **Safety notice:** Releases [v2.1.0–v3.0.0](https://github.com/Codifya/MacOptimizer/releases) contain known safety defects. Do not use them; use v3.1.0 or later. v3.1.0 is being prepared now and will be the first Developer ID-signed and notarized release.
+> **Safety notice:** Releases [v2.1.0–v3.0.0](https://github.com/Codifya/MacOptimizer/releases) contain known safety defects. Do not use them; use [v3.1.0](https://github.com/Codifya/MacOptimizer/releases/tag/v3.1.0) or later, the first Developer ID-signed and notarized release.
 
 <div align="center">
 
@@ -125,7 +125,7 @@ MacOptimizer help
 
 ### Download a release
 
-Signed and notarized DMGs start with **v3.1.0**, which is being prepared now. Earlier releases
+Signed and notarized DMGs start with **v3.1.0**. Earlier releases
 (v2.1.0–v3.0.0) were not notarized and contain known safety defects. Do not use them.
 
 ### Build from source

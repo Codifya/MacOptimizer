@@ -3,9 +3,21 @@
 All notable changes to MacOptimizer Pro are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.1.0] - Unreleased
+## [3.1.0] - 2026-09-29
 
 The safety release. v2.1.0–v3.0.0 contain known safety defects; use v3.1.0 or later.
+
+### Release
+
+- First Developer ID-signed, hardened-runtime and notarized release, shipped as a universal
+  (Apple silicon and Intel) DMG. One version source (`VERSION`); the release script signs,
+  notarizes, staples and verifies. (#21)
+- New app icon. (#24)
+- The dashboard quit button, like every other process-termination path, now asks for
+  confirmation and sends SIGTERM. The Autonomous Guard's terminate button now shows its
+  confirmation dialog on its own screen. (#23)
+- The App Manager screens are localized; the CLI prints English labels only; the offline
+  assistant shows a localized system summary. (#20)
 
 ### Security
 
@@ -57,11 +69,6 @@ The safety release. v2.1.0–v3.0.0 contain known safety defects; use v3.1.0 or 
   checks that the clipboard and Keychain are unchanged. The suite now has 87 test methods.
   (#2, #6, #7)
 - Gitleaks runs as a CLI in CI. (#2)
-
-### Release (in progress)
-
-- Developer ID signing, notarization and one version source for the app, the CLI and the tag are
-  being prepared. They are not merged yet.
 
 ## [2.2.0] – [3.0.0] - 2026-08-28
 

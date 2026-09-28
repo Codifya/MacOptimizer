@@ -8,7 +8,7 @@ problem.
 
 | Version | Status |
 | --- | --- |
-| 3.1.0 and later | Supported. v3.1.0 is being prepared and will be the first Developer ID-signed and notarized release. |
+| 3.1.0 and later | Supported. v3.1.0 is the first Developer ID-signed and notarized release. |
 | 2.1.0 – 3.0.0 | **Not safe. Do not use.** These releases contain known safety defects: a command injection in the update screen, and deletion paths that skipped the preview and confirmation. They were ad-hoc signed and not notarized. |
 
 ## Deletion pipeline
@@ -86,7 +86,7 @@ to the Keychain.
 | Command injection | No shell; allow-listed executables; argument filtering; validated Homebrew tokens | — |
 | Killing critical processes | PID and name/path protection lists; confirmation for force quit and AI suggestions | Name lists are maintained by hand |
 | Data sent to the cloud | NVIDIA NIM is off by default and needs a disclosure; app names need a separate opt-in | See [PRIVACY.md](PRIVACY.md) for exactly what is sent |
-| Tampered downloads | From v3.1.0: Developer ID signature and notarization (in preparation), plus GitHub build-provenance attestation | Releases up to v3.0.0 were not notarized |
+| Tampered downloads | From v3.1.0: Developer ID signature and notarization, plus GitHub build-provenance attestation | Releases up to v3.0.0 were not notarized |
 
 The app is not sandboxed and has no privileged helper. It runs with your user's permissions only.
 There is no audit log of file operations; the History screen lists completed operations from

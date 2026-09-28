@@ -82,6 +82,7 @@ public struct CLICommandRunner {
     private static func runJunkClean(dryRun: Bool, includeTrash: Bool) async {
         print("🔍 Gereksiz dosyalar ve önbellekler taranıyor...")
         let groups = await JunkCleanerService.shared.scanAll()
+        let trashItems = groups.first(where: { $0.type == .trashBin })?.items ?? []
         var plan = await JunkCleanerService.shared.generateCleaningPlan(from: groups)
         if !includeTrash { plan.items = plan.items.filter { $0.category != .trashBin } }
         
@@ -95,6 +96,9 @@ public struct CLICommandRunner {
         print("Toplam Kurtarılabilir Alan: \(ByteFormatter.format(plan.selectedEstimatedBytes))")
         print("Maksimum Risk Derecesi:   \(plan.maxRiskLevel.displayName)")
         print("Zero-Harm Güvenlik:       Aktif (Sistem kök yolları korumalı)")
+        if includeTrash {
+            print("Çöp Kutusu: \(trashItems.count) öğe (\(ByteFormatter.format(trashItems.reduce(0) { $0 + $1.sizeBytes }))) — kalıcı silme için ayrıca dahil edildi.")
+        }
         for item in plan.items where item.isSelected {
             print("  • \(item.name) — \(item.path) (\(item.sizeFormatted))")
         }
@@ -106,6 +110,13 @@ public struct CLICommandRunner {
             print("\n🚀 Onaylanan plan başlatılıyor...")
             let confirmation = SafeOperationExecutor.confirm(plan)
             let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation)
+            if includeTrash {
+                do {
+                    try SafeOperationExecutor.emptyTrash(trashItems.map { URL(fileURLWithPath: $0.path) }, confirmation: confirmation)
+                } catch {
+                    print("Çöp Kutusu boşaltılamadı: \(error.localizedDescription)")
+                }
+            }
             print("✨ Temizlik tamamlandı! \(ByteFormatter.format(result.totalFreedBytes)) alan başarıyla geri kazanıldı.")
         }
     }

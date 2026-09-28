@@ -55,8 +55,13 @@ public struct CLICommandRunner {
         let disk = await SystemMonitorService.shared.fetchDiskStats()
         let batt = await SystemMonitorService.shared.fetchBatteryStats()
         let hw = await SystemMonitorService.shared.fetchHardwareInfo()
-        
-        print("""
+
+        print(statusReport(memory: mem, cpu: cpu, disk: disk, battery: batt, hardware: hw))
+    }
+
+    /// English-only status text. The CLI never uses `L10n`; model raw values are not display text.
+    static func statusReport(memory mem: MemoryStats, cpu: CPUStats, disk: DiskStats, battery batt: BatteryStats, hardware hw: HardwareInfo) -> String {
+        """
         ========================================================
         ⚡ MacOptimizer Pro System Status
         ========================================================
@@ -65,16 +70,33 @@ public struct CLICommandRunner {
         ⏱️  Uptime:       \(hw.uptimeString)
         
         🧠 Memory Used:  \(ByteFormatter.formatMemory(mem.actualUsedBytes)) / \(ByteFormatter.formatMemory(mem.totalBytes)) (\(Int(mem.usedPercentage * 100))%)
-        📊 Memory Pressure: \(mem.pressureLevel.rawValue)
+        📊 Memory Pressure: \(englishLabel(for: mem.pressureLevel))
         💾 Swap Used:    \(ByteFormatter.formatMemory(mem.swapUsedBytes)) / \(ByteFormatter.formatMemory(mem.swapTotalBytes))
         
         🔥 CPU Usage:    \(String(format: "%.1f", cpu.totalUsage))% (\(cpu.physicalCores) cores)
-        🌡️ Thermal State: \(cpu.thermalState.rawValue)
-        
+        🌡️ Thermal State: \(englishLabel(for: cpu.thermalState))
+
         💽 Disk:         \(ByteFormatter.format(disk.usedBytes)) used / \(ByteFormatter.format(disk.freeBytes)) free
         🔋 Battery:      \(batt.percentage)% (\(batt.powerSource))
         ========================================================
-        """)
+        """
+    }
+
+    static func englishLabel(for level: MemoryStats.MemoryPressureLevel) -> String {
+        switch level {
+        case .normal: return "Normal"
+        case .warning: return "Warning"
+        case .critical: return "Critical"
+        }
+    }
+
+    static func englishLabel(for state: CPUStats.ThermalState) -> String {
+        switch state {
+        case .nominal: return "Normal (Cool)"
+        case .fair: return "Slightly Warm"
+        case .serious: return "High Temperature (Throttling Risk)"
+        case .critical: return "Critical Temperature (Fans at Maximum)"
+        }
     }
     
     private static func runJunkClean(dryRun: Bool, includeTrash: Bool) async {

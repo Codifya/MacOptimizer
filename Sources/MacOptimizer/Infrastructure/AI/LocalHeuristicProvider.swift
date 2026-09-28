@@ -5,9 +5,39 @@ public struct LocalHeuristicProvider: AIProvider {
     public let providerId: String = "local_heuristics"
     public let displayName: String = L10n.string("Local Rule Engine (100% Offline & Secure)", table: .ai)
     public let requiresNetwork: Bool = false
-    
-    public init() {}
-    
+
+    /// Telemetry shown to the user in offline replies. The English cloud snapshot is model input only.
+    public struct SystemSnapshot: Sendable {
+        public let hardware: HardwareInfo
+        public let memory: MemoryStats
+        public let cpu: CPUStats
+        public let disk: DiskStats
+
+        public init(hardware: HardwareInfo, memory: MemoryStats, cpu: CPUStats, disk: DiskStats) {
+            self.hardware = hardware
+            self.memory = memory
+            self.cpu = cpu
+            self.disk = disk
+        }
+    }
+
+    private let snapshot: SystemSnapshot?
+
+    public init(snapshot: SystemSnapshot? = nil) {
+        self.snapshot = snapshot
+    }
+
+    /// Localized system summary for the user (never the English cloud snapshot text).
+    static func localizedSummary(_ snapshot: SystemSnapshot) -> String {
+        [
+            L10n.string("Mac model: %@ (%@), macOS version: %@", table: .ai,
+                        snapshot.hardware.modelName, snapshot.hardware.chipName, snapshot.hardware.osVersion),
+            L10n.string("RAM: %lld%%", table: .ai, Int(snapshot.memory.usedPercentage * 100)),
+            L10n.string("CPU: %@%%, Free disk: %lld%%", table: .ai,
+                        String(format: "%.1f", snapshot.cpu.totalUsage), Int(snapshot.disk.freePercentage * 100))
+        ].joined(separator: "\n")
+    }
+
     public func diagnose(
         memory: MemoryStats,
         cpu: CPUStats,
@@ -106,7 +136,11 @@ public struct LocalHeuristicProvider: AIProvider {
         
         // Keyword lists cover both Turkish and English user input.
         if lastUserMsg.contains("ram") || lastUserMsg.contains("bellek") || lastUserMsg.contains("memory") {
-            return L10n.string("I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps.\n\nSystem Info:\n%@", table: .ai, snapshotContext)
+            // `snapshotContext` is the English cloud model input; the user sees the localized summary instead.
+            guard let snapshot else {
+                return L10n.string("I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps.", table: .ai)
+            }
+            return L10n.string("I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps.\n\nSystem Info:\n%@", table: .ai, Self.localizedSummary(snapshot))
         } else if lastUserMsg.contains("ısın") || lastUserMsg.contains("cpu") || lastUserMsg.contains("fan") || lastUserMsg.contains("heat") {
             return L10n.string("Based on processor and hardware telemetry, you can check the most resource-hungry processes in Task Manager and safely terminate unresponsive user apps.", table: .ai)
         } else if lastUserMsg.contains("temiz") || lastUserMsg.contains("disk") || lastUserMsg.contains("yer")

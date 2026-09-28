@@ -1,1 +1,24 @@
-{}
+"DNS cache could not be flushed. Administrator permission may be required (dscacheutil: %lld, mDNSResponder: %lld)." = "DNS önbelleği temizlenemedi. Yönetici izni gerekebilir (dscacheutil: %lld, mDNSResponder: %lld).";
+"DNS and mDNSResponder caches were flushed successfully." = "DNS ve mDNSResponder önbellekleri başarıyla temizlendi.";
+"QuickLook preview cache was reset." = "QuickLook önizleme önbelleği sıfırlandı.";
+"QuickLook cache could not be reset (exit code: %lld)." = "QuickLook önbelleği sıfırlanamadı (çıkış kodu: %lld).";
+"LaunchServices database was rebuilt successfully." = "LaunchServices veri tabanı başarıyla yeniden oluşturuldu.";
+"LaunchServices database could not be rebuilt (exit code: %lld)." = "LaunchServices veri tabanı yeniden oluşturulamadı (çıkış kodu: %lld).";
+"CoreAudio was restarted." = "CoreAudio yeniden başlatıldı.";
+"CoreAudio could not be restarted; administrator permission may be required (exit code: %lld)." = "CoreAudio yeniden başlatılamadı; yönetici izni gerekebilir (çıkış kodu: %lld).";
+"Spotlight search index was reset and reindexing started." = "Spotlight arama dizini sıfırlandı ve yeniden indeksleme başlatıldı.";
+"Spotlight index could not be rebuilt; administrator permission may be required (exit code: %lld)." = "Spotlight dizini yeniden oluşturulamadı; yönetici izni gerekebilir (çıkış kodu: %lld).";
+"Clipboard contents were cleared safely." = "Pano içeriği güvenle temizlendi.";
+"Refreshing network and DNS caches..." = "Ağ ve DNS önbellekleri yenileniyor...";
+"Resetting QuickLook cache..." = "QuickLook önbelleği sıfırlanıyor...";
+"Optimization complete!" = "Optimizasyon tamamlandı!";
+"Quick Smart Optimization" = "Hızlı Akıllı İyileştirme";
+"System root directories and user data folders cannot be deleted: %@" = "Sistem kök dizinleri ve kullanıcı veri klasörleri silinemez: %@";
+"The safety policy blocked deletion of this path." = "Güvenlik politikası bu yolun silinmesini engelledi.";
+"This file deletion cannot be undone." = "Bu dosya silme işlemi geri alınamaz.";
+"macOS kernel and system processes (%@, PID: %lld) cannot be terminated." = "macOS çekirdek ve sistem süreçleri (%@, PID: %lld) sonlandırılamaz.";
+"Built-in macOS system apps cannot be uninstalled." = "macOS yerleşik sistem uygulamaları kaldırılamaz.";
+"The %@ app and all its related files will be uninstalled." = "%@ uygulaması ve ilişkili tüm dosyaları kaldırılacak.";
+"macOS system launch daemons and services cannot be disabled." = "macOS sistem launch daemon'ları ve servisleri devre dışı bırakılamaz.";
+"macOS system services cannot be removed." = "macOS sistem servisleri silinemez.";
+"The %@ startup service will be permanently removed." = "%@ başlangıç servisi kalıcı olarak silinecek.";

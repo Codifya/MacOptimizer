@@ -35,44 +35,44 @@ public struct SafetyPolicyEngine: Sendable {
         case .removeFile(let path):
             let canonical = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
             if PathProtectionPolicy.isForbiddenPath(canonical, homeDirectory: homeDirectory) {
-                return .denied(reason: "Sistem kök dizinleri veya kullanıcı ana veri klasörleri silinemez: \(canonical)")
+                return .denied(reason: L10n.string("System root directories and user data folders cannot be deleted: %@", table: .services, canonical))
             }
             
             let risk = OperationRiskClassifier.classifyFileRemoval(path: canonical, homeDirectory: homeDirectory)
             if risk == .forbidden {
-                return .denied(reason: "Güvenlik politikası bu yolun silinmesini engelledi.")
+                return .denied(reason: L10n.string("The safety policy blocked deletion of this path.", table: .services))
             }
             
             if risk == .destructive {
-                return .requiresConfirmation(risk: risk, warning: "Bu işlem geri alınamaz bir dosya silme işlemidir.")
+                return .requiresConfirmation(risk: risk, warning: L10n.string("This file deletion cannot be undone.", table: .services))
             }
             
             return .allowed(risk: risk)
             
         case .terminateProcess(let pid, let name, let path):
             if ProcessProtectionPolicy.isForbiddenProcess(pid: pid, name: name, path: path) {
-                return .denied(reason: "macOS çekirdek ve sistem süreçleri (\(name), PID: \(pid)) sonlandırılamaz.")
+                return .denied(reason: L10n.string("macOS kernel and system processes (%@, PID: %lld) cannot be terminated.", table: .services, name, pid))
             }
             return .allowed(risk: .medium)
             
         case .uninstallApp(let path, let bundleIdentifier):
             let canonical = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
             if ApplicationProtectionPolicy.isProtectedApp(path: canonical, bundleIdentifier: bundleIdentifier) {
-                return .denied(reason: "macOS yerleşik sistem uygulamaları kaldırılamaz.")
+                return .denied(reason: L10n.string("Built-in macOS system apps cannot be uninstalled.", table: .services))
             }
-            return .requiresConfirmation(risk: .destructive, warning: "\(bundleIdentifier) uygulaması tüm ilişkili dosyalarıyla kaldırılacaktır.")
+            return .requiresConfirmation(risk: .destructive, warning: L10n.string("The %@ app and all its related files will be uninstalled.", table: .services, bundleIdentifier))
             
         case .toggleLaunchItem(let path, let label):
             if LaunchItemProtectionPolicy.isProtectedLaunchItem(path: path, label: label) {
-                return .denied(reason: "macOS sistem launch daemon ve servisleri devre dışı bırakılamaz.")
+                return .denied(reason: L10n.string("macOS system launch daemons and services cannot be disabled.", table: .services))
             }
             return .allowed(risk: .low)
             
         case .removeLaunchItem(let path, let label):
             if LaunchItemProtectionPolicy.isProtectedLaunchItem(path: path, label: label) {
-                return .denied(reason: "macOS sistem servisleri silinemez.")
+                return .denied(reason: L10n.string("macOS system services cannot be removed.", table: .services))
             }
-            return .requiresConfirmation(risk: .destructive, warning: "\(label) başlangıç servisi kalıcı olarak silinecektir.")
+            return .requiresConfirmation(risk: .destructive, warning: L10n.string("The %@ startup service will be permanently removed.", table: .services, label))
             
         case .executeMaintenance(let taskIdentifier):
             let risk = OperationRiskClassifier.classifyMaintenanceTask(taskIdentifier: taskIdentifier)

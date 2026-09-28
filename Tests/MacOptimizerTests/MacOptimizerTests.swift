@@ -683,8 +683,9 @@ final class MacOptimizerTests: XCTestCase {
         let intel = ["MaxCapacity": 4_000, "DesignCapacity": 5_000]
         XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: appleSilicon), 92)
         XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: intel), 80)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 96, "DesignCapacity": 5_000]), 96)
         XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 6_000, "DesignCapacity": 5_000]), 100)
-        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 1, "DesignCapacity": 0]), 0)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 5_000, "DesignCapacity": 0]), 0)
     }
 
     func testSecurityScoreAwardsNoFirewallPointsWhenDisabled() {

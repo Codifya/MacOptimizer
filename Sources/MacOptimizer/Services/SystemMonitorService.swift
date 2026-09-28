@@ -237,12 +237,9 @@ public actor SystemMonitorService: SystemMetricsSampling {
                         let tempC = (temp > 1000) ? (Double(temp) / 100.0) : (Double(temp) / 10.0 - 273.15)
                         stats.temperatureCelsius = Swift.max(0.0, Swift.min(100.0, tempC))
                     }
-                    if let designCap = props["DesignCapacity"] as? Int, designCap > 0,
-                       (props["AppleRawMaxCapacity"] is Int || props["NominalChargeCapacity"] is Int || props["MaxCapacity"] is Int) {
-                        stats.designCapacityMah = designCap
+                    if props["AppleRawMaxCapacity"] is Int || props["NominalChargeCapacity"] is Int || props["MaxCapacity"] is Int {
+                        stats.designCapacityMah = props["DesignCapacity"] as? Int ?? 0
                         stats.healthPercentage = Self.batteryHealthPercentage(properties: props.compactMapValues { $0 as? Int })
-                    } else if let percentage = props["MaxCapacity"] as? Int {
-                        stats.healthPercentage = min(100, max(0, percentage))
                     }
                     if let isPermanentFail = props["PermanentFailureStatus"] as? Int, isPermanentFail != 0 {
                         stats.condition = "Servis Öneriliyor"
@@ -261,9 +258,14 @@ public actor SystemMonitorService: SystemMetricsSampling {
     }
 
     static func batteryHealthPercentage(properties: [String: Int]) -> Int {
+        if let capacity = properties["AppleRawMaxCapacity"] ?? properties["NominalChargeCapacity"],
+           let design = properties["DesignCapacity"], design > 0 {
+            return min(100, max(0, Int((Double(capacity) / Double(design) * 100).rounded())))
+        }
+        guard let maxCapacity = properties["MaxCapacity"] else { return 0 }
+        if (0...100).contains(maxCapacity) { return maxCapacity }
         guard let design = properties["DesignCapacity"], design > 0 else { return 0 }
-        let capacity = properties["AppleRawMaxCapacity"] ?? properties["NominalChargeCapacity"] ?? properties["MaxCapacity"] ?? 0
-        return min(100, max(0, Int((Double(capacity) / Double(design) * 100).rounded())))
+        return min(100, max(0, Int((Double(maxCapacity) / Double(design) * 100).rounded())))
     }
 
     static func sampledCPUUsage(previous: [UInt64], current: [UInt64]) -> Double? {

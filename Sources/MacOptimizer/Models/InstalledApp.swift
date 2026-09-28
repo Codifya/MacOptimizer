@@ -13,7 +13,7 @@ public enum AppArchitecture: String, Sendable, Equatable {
         case .universal: return "Universal"
         case .appleSilicon: return "Apple Silicon"
         case .intel: return "Intel"
-        case .unknown: return "Diğer"
+        case .unknown: return L10n.string("Other", table: .services)
         }
     }
     
@@ -43,6 +43,14 @@ public struct AppUpdateInfo: Sendable, Equatable {
         case homebrew = "Homebrew Cask"
         case appStore = "Mac App Store"
         case directCheck = "Doğrudan Kontrol"
+
+        /// Localized display label. Raw values are kept stable and must not be shown in the UI.
+        public var localizedTitle: String {
+            switch self {
+            case .sparkle, .homebrew, .appStore: return rawValue
+            case .directCheck: return L10n.string("Direct Check", table: .services)
+            }
+        }
     }
     
     public init(

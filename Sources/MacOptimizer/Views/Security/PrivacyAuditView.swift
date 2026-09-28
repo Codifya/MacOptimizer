@@ -53,11 +53,11 @@ public struct PrivacyAuditView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Güvenlik & Gizlilik Denetimi")
+                    Text(l10n: "Security & Privacy Audit", table: .dashboard)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
-                    Text("macOS çekirdek koruma durumu (SIP), Gatekeeper, Güvenlik Duvarı ve sistem izinlerini denetleyin.")
+                    Text(l10n: "Audit macOS System Integrity Protection (SIP), Gatekeeper, the Firewall, and system permissions.", table: .dashboard)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -66,7 +66,7 @@ public struct PrivacyAuditView: View {
                 Spacer(minLength: 12)
                 
                 ActionButton(
-                    title: appState.isLoadingSecurityAudit ? "Denetleniyor..." : "Yeniden Denetle",
+                    title: appState.isLoadingSecurityAudit ? L10n.string("Auditing...", table: .dashboard) : L10n.string("Audit Again", table: .dashboard),
                     iconName: "arrow.clockwise",
                     gradient: SystemTheme.successGradient,
                     isLoading: appState.isLoadingSecurityAudit
@@ -105,10 +105,10 @@ public struct PrivacyAuditView: View {
                         Text(report.ratingDescription)
                             .font(.system(size: 15, weight: .bold))
                         
-                        MetricBadge(text: "/100 Puan", colorName: report.ratingColorName)
+                        MetricBadge(text: L10n.string("/100 Points", table: .dashboard), colorName: report.ratingColorName)
                     }
                     
-                    Text("macOS yerel güvenlik mekanizmaları incelendi. Sistemin temel bütünlüğü ve yetkisiz müdahale direnci ölçüldü.")
+                    Text(l10n: "Native macOS security mechanisms were inspected. Core system integrity and resistance to unauthorized tampering were measured.", table: .dashboard)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -165,7 +165,7 @@ public struct PrivacyAuditView: View {
         GlassCard(cornerRadius: 16, padding: 36) {
             VStack(spacing: 12) {
                 ProgressView()
-                Text("macOS Güvenlik Ayarları Denetleniyor...")
+                Text(l10n: "Auditing macOS Security Settings...", table: .dashboard)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
@@ -180,11 +180,11 @@ public struct PrivacyAuditView: View {
                     .font(.system(size: 44))
                     .foregroundStyle(SystemTheme.successGradient)
                 
-                Text("Güvenlik Denetimi Başlatılmadı")
+                Text(l10n: "Security Audit Not Started", table: .dashboard)
                     .font(.system(size: 16, weight: .bold))
                 
                 ActionButton(
-                    title: "Denetimi Başlat",
+                    title: L10n.string("Start Audit", table: .dashboard),
                     iconName: "play.fill",
                     gradient: SystemTheme.successGradient
                 ) {

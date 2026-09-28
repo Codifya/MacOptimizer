@@ -45,7 +45,7 @@ public actor AppUninstallerService {
                 id: app.path,
                 path: app.path,
                 name: "\(app.name).app",
-                locationName: "Uygulama Paketi (Ana Dosya)",
+                locationName: L10n.string("App Bundle (Main File)", table: .services),
                 sizeBytes: mainAppSize,
                 isSelected: true,
                 isMainApp: true
@@ -61,14 +61,14 @@ public actor AppUninstallerService {
         
         if validBundleId {
             targetLocations.append(("Library/Application Support/\(bundleId)", "Application Support"))
-            targetLocations.append(("Library/Caches/\(bundleId)", "Önbellek (Caches)"))
-            targetLocations.append(("Library/Preferences/\(bundleId).plist", "Tercihler (Preferences)"))
-            targetLocations.append(("Library/Saved Application State/\(bundleId).savedState", "Kayıtlı Uygulama Durumu"))
-            targetLocations.append(("Library/Containers/\(bundleId)", "Uygulama Sandbox Kapsayıcısı"))
-            targetLocations.append(("Library/WebKit/\(bundleId)", "WebKit Verileri"))
-            targetLocations.append(("Library/HTTPStorages/\(bundleId)", "HTTP Depolama"))
-            targetLocations.append(("Library/Logs/\(bundleId)", "Uygulama Günlükleri"))
-            targetLocations.append(("Library/LaunchAgents/\(bundleId).plist", "Başlangıç Servisi (LaunchAgent)"))
+            targetLocations.append(("Library/Caches/\(bundleId)", L10n.string("Caches", table: .services)))
+            targetLocations.append(("Library/Preferences/\(bundleId).plist", L10n.string("Preferences", table: .services)))
+            targetLocations.append(("Library/Saved Application State/\(bundleId).savedState", L10n.string("Saved Application State", table: .services)))
+            targetLocations.append(("Library/Containers/\(bundleId)", L10n.string("App Sandbox Container", table: .services)))
+            targetLocations.append(("Library/WebKit/\(bundleId)", L10n.string("WebKit Data", table: .services)))
+            targetLocations.append(("Library/HTTPStorages/\(bundleId)", L10n.string("HTTP Storage", table: .services)))
+            targetLocations.append(("Library/Logs/\(bundleId)", L10n.string("App Logs", table: .services)))
+            targetLocations.append(("Library/LaunchAgents/\(bundleId).plist", L10n.string("Launch Service (LaunchAgent)", table: .services)))
         }
         
         for loc in targetLocations {
@@ -103,7 +103,7 @@ public actor AppUninstallerService {
                                     id: dir.path,
                                     path: dir.path,
                                     name: dir.lastPathComponent,
-                                    locationName: "Grup Kapsayıcısı (Group Container)",
+                                    locationName: L10n.string("Group Container", table: .services),
                                     sizeBytes: size,
                                     isSelected: false,
                                     isMainApp: false

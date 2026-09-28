@@ -44,14 +44,14 @@ public struct MemoryView: View {
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         .alert(isPresented: $showKillConfirmation) {
             Alert(
-                title: Text("İşlemi Sonlandır"),
-                message: Text("\(processToKill?.name ?? "Seçili işlem") (PID: \(processToKill?.pid ?? 0)) kapatılsın mı? Kaydedilmemiş veriler kaybolabilir."),
-                primaryButton: .destructive(Text("Zorla Kapat")) {
+                title: Text(l10n: "Terminate Process", table: .dashboard),
+                message: Text(L10n.string("Quit %@ (PID: %lld)? Unsaved data may be lost.", table: .dashboard, processToKill?.name ?? L10n.string("Selected process", table: .dashboard), Int64(processToKill?.pid ?? 0))),
+                primaryButton: .destructive(Text(l10n: "Force Quit", table: .dashboard)) {
                     if let pid = processToKill?.pid {
                         appState.killProcess(pid: pid, force: true)
                     }
                 },
-                secondaryButton: .cancel(Text("Vazgeç"))
+                secondaryButton: .cancel(Text(l10n: "Cancel", table: .dashboard))
             )
         }
     }
@@ -63,7 +63,7 @@ public struct MemoryView: View {
                 // Circular Gauge
                 CircularGaugeView(
                     percentage: metrics.memoryStats.usedPercentage,
-                    title: "Bellek Kullanımı",
+                    title: L10n.string("Memory Usage", table: .dashboard),
                     valueText: String(format: "%.0f%%", metrics.memoryStats.usedPercentage * 100),
                     subText: "\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(metrics.memoryStats.totalBytes))",
                     gradient: SystemTheme.memoryGradient,
@@ -73,17 +73,17 @@ public struct MemoryView: View {
                 
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 8) {
-                        Text("RAM Bellek Yönetimi")
+                        Text(l10n: "RAM Memory Management", table: .dashboard)
                             .font(.system(size: 16, weight: .bold))
                             .lineLimit(1)
                         
                         MetricBadge(
-                            text: "Basınç: \(metrics.memoryStats.pressureLevel.rawValue)",
+                            text: L10n.string("Pressure: %@", table: .dashboard, metrics.memoryStats.pressureLevel.localizedTitle),
                             colorName: metrics.memoryStats.pressureLevel.colorName
                         )
                     }
                     
-                    Text("Bellek baskısı yüksekse, aşağıdaki listeden yoğun bellek kullanan uygulamaları kapatabilirsiniz.")
+                    Text(l10n: "If memory pressure is high, you can quit memory-heavy apps from the list below.", table: .dashboard)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -103,12 +103,12 @@ public struct MemoryView: View {
                 // Responsive Table Toolbar
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
-                        Label("Çalışan Süreçler & Görev Yöneticisi", systemImage: "cpu")
+                        Label(L10n.string("Running Processes & Task Manager", table: .dashboard), systemImage: "cpu")
                             .font(.system(size: 14, weight: .bold))
                         
                         Spacer()
                         
-                        Toggle("Yalnızca Uygulamalar", isOn: $filterUserAppsOnly)
+                        Toggle(L10n.string("Apps Only", table: .dashboard), isOn: $filterUserAppsOnly)
                             .toggleStyle(.checkbox)
                             .font(.system(size: 12))
                         
@@ -117,11 +117,11 @@ public struct MemoryView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Çalışan Süreçler & Görev Yöneticisi", systemImage: "cpu")
+                        Label(L10n.string("Running Processes & Task Manager", table: .dashboard), systemImage: "cpu")
                             .font(.system(size: 14, weight: .bold))
                         
                         HStack(spacing: 12) {
-                            Toggle("Yalnızca Uygulamalar", isOn: $filterUserAppsOnly)
+                            Toggle(L10n.string("Apps Only", table: .dashboard), isOn: $filterUserAppsOnly)
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 12))
                             
@@ -135,7 +135,7 @@ public struct MemoryView: View {
                 
                 // Table Header
                 HStack {
-                    Text("Uygulama / İşlem")
+                    Text(l10n: "App / Process", table: .dashboard)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -150,12 +150,12 @@ public struct MemoryView: View {
                         .foregroundColor(.secondary)
                         .frame(width: 65, alignment: .trailing)
                     
-                    Text("Bellek (RAM)")
+                    Text(l10n: "Memory (RAM)", table: .dashboard)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 95, alignment: .trailing)
                     
-                    Text("Eylem")
+                    Text(l10n: "Action", table: .dashboard)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 80, alignment: .trailing)
@@ -199,16 +199,16 @@ public struct MemoryView: View {
                                 
                                 HStack(spacing: 4) {
                                     if proc.isProtected {
-                                        Text("Sistem")
+                                        Text(l10n: "System", table: .dashboard)
                                             .font(.system(size: 10, weight: .semibold))
                                             .foregroundColor(.secondary)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
                                             .background(Color.secondary.opacity(0.1))
                                             .clipShape(RoundedRectangle(cornerRadius: 6))
-                                            .help("macOS Korunan Sistem Süreci")
+                                            .help(L10n.string("Protected macOS system process", table: .dashboard))
                                     } else {
-                                        Button("Kapat") {
+                                        Button(L10n.string("Quit", table: .dashboard)) {
                                             processToKill = proc
                                             showKillConfirmation = true
                                         }
@@ -242,7 +242,7 @@ public struct MemoryView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
                 .font(.system(size: 11))
-            TextField("Süreç adı veya PID...", text: $searchText)
+            TextField(L10n.string("Process name or PID...", table: .dashboard), text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
         }

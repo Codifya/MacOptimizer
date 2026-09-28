@@ -63,7 +63,7 @@ struct MenuBarView: View {
                 Spacer()
                 
                 MetricBadge(
-                    text: metrics.cpuStats.thermalState.rawValue,
+                    text: metrics.cpuStats.thermalState.localizedTitle,
                     colorName: metrics.cpuStats.thermalState.colorName
                 )
             }

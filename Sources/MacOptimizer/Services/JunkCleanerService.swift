@@ -35,7 +35,7 @@ public final class JunkCleanerService: Sendable {
         for group in groups {
             for item in group.items {
                 if item.category == .trashBin {
-                    warnings.append("Çöp Sepeti ayrı ve açık onayla boşaltılmalıdır: \(item.name)")
+                    warnings.append(L10n.string("Trash must be emptied separately with explicit confirmation: %@", table: .services, item.name))
                     continue
                 }
                 let canonicalPath = URL(fileURLWithPath: item.path).resolvingSymlinksInPath().standardizedFileURL.path
@@ -43,7 +43,7 @@ public final class JunkCleanerService: Sendable {
                 
                 // Never add forbidden paths into the plan
                 if risk == .forbidden {
-                    warnings.append("Korumalı dosya plana eklenmedi: \(item.name)")
+                    warnings.append(L10n.string("Protected file was not added to the plan: %@", table: .services, item.name))
                     continue
                 }
                 
@@ -101,7 +101,7 @@ public final class JunkCleanerService: Sendable {
         }
         
         let duration = CFAbsoluteTimeGetCurrent() - startTime
-        progressHandler?("Temizlik Tamamlandı", 1.0)
+        progressHandler?(L10n.string("Cleanup Complete", table: .services), 1.0)
         
         return CleaningExecutionResult(
             planId: plan.id,
@@ -125,7 +125,7 @@ public final class JunkCleanerService: Sendable {
             .appLeftovers
         ]
         
-        progressHandler?("Gereksiz dosyalar taranıyor...", 0.1)
+        progressHandler?(L10n.string("Scanning junk files...", table: .services), 0.1)
         
         var categoryResults: [JunkCategoryType: [JunkFileItem]] = [:]
         
@@ -155,7 +155,7 @@ public final class JunkCleanerService: Sendable {
             groups.append(JunkCategoryGroup(type: cat, items: items))
         }
         
-        progressHandler?("Tarama Tamamlandı", 1.0)
+        progressHandler?(L10n.string("Scan Complete", table: .services), 1.0)
         return groups
     }
     
@@ -207,7 +207,7 @@ public final class JunkCleanerService: Sendable {
             if size > 0 {
                 items.append(JunkFileItem(
                     path: crashReporterURL.path,
-                    name: "Sistem Çökme & Tanı Raporları",
+                    name: L10n.string("System Crash & Diagnostic Reports", table: .services),
                     sizeBytes: size,
                     category: .systemLogs,
                     isSelected: true,
@@ -224,21 +224,21 @@ public final class JunkCleanerService: Sendable {
         var items: [JunkFileItem] = []
         
         let devTargets: [(path: String, name: String, desc: String)] = [
-            ("Library/Developer/Xcode/DerivedData", "Xcode DerivedData", "Derleme ve indeks önbellekleri"),
-            ("Library/Developer/Xcode/Archives", "Xcode Arşivleri", "Eski uygulama derleme arşivleri"),
-            ("Library/Developer/Xcode/iOS DeviceSupport", "iOS Device Support", "Eski iOS cihaz sembolleri"),
-            ("Library/Developer/Xcode/watchOS DeviceSupport", "watchOS Device Support", "Eski watchOS cihaz sembolleri"),
-            ("Library/Developer/CoreSimulator/Caches", "Simülatör Önbellekleri", "iOS Simülatör geçici dosyaları"),
-            (".npm/_cacache", "NPM Önbelleği", "Node Package Manager önbelleği"),
-            (".yarn/cache", "Yarn Önbelleği", "Yarn paket önbelleği"),
-            (".pnpm-store", "pnpm Store", "pnpm global paket havuzu"),
-            (".cargo/registry/cache", "Rust Cargo Önbelleği", "Cargo crates önbellek dosyaları"),
-            ("Library/Caches/CocoaPods", "CocoaPods Önbelleği", "iOS Pods indirme önbellekleri"),
-            (".gradle/caches", "Gradle Önbelleği", "Android ve Java derleme önbellekleri"),
-            (".cache/pip", "Python pip Önbelleği", "Python paket indirme önbellekleri"),
-            ("Library/Caches/Homebrew", "Homebrew İndirme Önbelleği", "İndirilen formül ve bottle paketleri"),
-            ("Library/Caches/uv", "Python UV Önbelleği", "UV paket yöneticisi önbelleği"),
-            ("Library/Caches/pypoetry", "Python Poetry Önbelleği", "Poetry sanal ortam ve paket havuzu")
+            ("Library/Developer/Xcode/DerivedData", "Xcode DerivedData", L10n.string("Build and index caches", table: .services)),
+            ("Library/Developer/Xcode/Archives", L10n.string("Xcode Archives", table: .services), L10n.string("Old app build archives", table: .services)),
+            ("Library/Developer/Xcode/iOS DeviceSupport", "iOS Device Support", L10n.string("Old iOS device symbols", table: .services)),
+            ("Library/Developer/Xcode/watchOS DeviceSupport", "watchOS Device Support", L10n.string("Old watchOS device symbols", table: .services)),
+            ("Library/Developer/CoreSimulator/Caches", L10n.string("Simulator Caches", table: .services), L10n.string("iOS Simulator temporary files", table: .services)),
+            (".npm/_cacache", L10n.string("NPM Cache", table: .services), L10n.string("Node Package Manager cache", table: .services)),
+            (".yarn/cache", L10n.string("Yarn Cache", table: .services), L10n.string("Yarn package cache", table: .services)),
+            (".pnpm-store", "pnpm Store", L10n.string("pnpm global package store", table: .services)),
+            (".cargo/registry/cache", L10n.string("Rust Cargo Cache", table: .services), L10n.string("Cargo crate cache files", table: .services)),
+            ("Library/Caches/CocoaPods", L10n.string("CocoaPods Cache", table: .services), L10n.string("iOS Pods download caches", table: .services)),
+            (".gradle/caches", L10n.string("Gradle Cache", table: .services), L10n.string("Android and Java build caches", table: .services)),
+            (".cache/pip", L10n.string("Python pip Cache", table: .services), L10n.string("Python package download caches", table: .services)),
+            ("Library/Caches/Homebrew", L10n.string("Homebrew Download Cache", table: .services), L10n.string("Downloaded formulae and bottle packages", table: .services)),
+            ("Library/Caches/uv", L10n.string("Python UV Cache", table: .services), L10n.string("UV package manager cache", table: .services)),
+            ("Library/Caches/pypoetry", L10n.string("Python Poetry Cache", table: .services), L10n.string("Poetry virtual environments and package store", table: .services))
         ]
         
         for target in devTargets where !flag.isCancelled {
@@ -266,13 +266,13 @@ public final class JunkCleanerService: Sendable {
         var items: [JunkFileItem] = []
         
         let browserPaths: [(path: String, name: String)] = [
-            ("Library/Caches/com.apple.Safari", "Safari Web Önbelleği"),
-            ("Library/Containers/com.apple.Safari/Data/Library/Caches", "Safari Container Önbelleği"),
-            ("Library/Caches/Google/Chrome", "Google Chrome Önbelleği"),
-            ("Library/Caches/company.thebrowser.Browser", "Arc Tarayıcı Önbelleği"),
-            ("Library/Caches/BraveSoftware/Brave-Browser", "Brave Tarayıcı Önbelleği"),
-            ("Library/Caches/com.microsoft.edgemac", "Microsoft Edge Önbelleği"),
-            ("Library/Caches/Firefox", "Mozilla Firefox Önbelleği")
+            ("Library/Caches/com.apple.Safari", L10n.string("Safari Web Cache", table: .services)),
+            ("Library/Containers/com.apple.Safari/Data/Library/Caches", L10n.string("Safari Container Cache", table: .services)),
+            ("Library/Caches/Google/Chrome", L10n.string("Google Chrome Cache", table: .services)),
+            ("Library/Caches/company.thebrowser.Browser", L10n.string("Arc Browser Cache", table: .services)),
+            ("Library/Caches/BraveSoftware/Brave-Browser", L10n.string("Brave Browser Cache", table: .services)),
+            ("Library/Caches/com.microsoft.edgemac", L10n.string("Microsoft Edge Cache", table: .services)),
+            ("Library/Caches/Firefox", L10n.string("Mozilla Firefox Cache", table: .services))
         ]
         
         for browser in browserPaths where !flag.isCancelled {
@@ -314,7 +314,7 @@ public final class JunkCleanerService: Sendable {
                 sizeBytes: size,
                 category: .trashBin,
                 isSelected: false,
-                detail: "Çöp Sepetinde",
+                detail: L10n.string("In Trash", table: .services),
                 lastModifiedDate: modDate
             ))
         }
@@ -357,7 +357,7 @@ public final class JunkCleanerService: Sendable {
                                 sizeBytes: Int64(size),
                                 category: .largeFiles,
                                 isSelected: false,
-                                detail: "\(folder) / \(fileURL.pathExtension.uppercased()) Dosyası",
+                                detail: L10n.string("%@ / %@ File", table: .services, folder, fileURL.pathExtension.uppercased()),
                                 lastModifiedDate: values.contentModificationDate
                             ))
                         }
@@ -436,7 +436,7 @@ public final class JunkCleanerService: Sendable {
                             sizeBytes: size,
                             category: .appLeftovers,
                             isSelected: false,
-                            detail: "Silinmiş uygulama kalıntısı (Application Support)"
+                            detail: L10n.string("Deleted app leftover (Application Support)", table: .services)
                         ))
                     }
                 }

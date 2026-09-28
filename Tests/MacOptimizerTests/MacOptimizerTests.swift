@@ -487,7 +487,7 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(insights.contains(where: { $0.severity == .critical }))
         let memoryInsight = insights.first(where: { $0.category == "RAM" })
         XCTAssertTrue(memoryInsight?.actions.isEmpty == true)
-        XCTAssertTrue(memoryInsight?.summary.contains("uygulamaları kapatmayı") == true)
+        XCTAssertTrue(memoryInsight?.summary.contains(L10n.string("Try closing the apps using the most memory.", table: .ai)) == true)
     }
     
     func testNIMRequestPayloadDisclosureAndHistoryLimit() throws {
@@ -495,17 +495,48 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(off.contains("SecretApp"))
         let on = NvidiaNIMProvider.cloudContext("metrics", processNames: ["SecretApp (PID: 7)"], includeProcesses: true)
         XCTAssertTrue(on.contains("SecretApp"))
+        XCTAssertTrue(on.contains("Running apps: SecretApp (PID: 7)"))
 
         let messages = (0..<10).map { ["role": "user", "content": "message-\($0)" + ($0 == 9 ? " /Users/alice/Secret.txt" : "")] }
         let body = try NvidiaNIMService.requestBody(messages: messages, config: NIMConfig(apiKey: "secret-key"))
         let payload = String(decoding: body, as: UTF8.self)
         XCTAssertFalse(payload.contains("secret-key"))
         XCTAssertFalse(payload.contains("/Users/"))
-        XCTAssertTrue(payload.contains("[dosya yolu]"))
+        XCTAssertTrue(payload.contains("[file path]"))
         XCTAssertFalse(payload.contains("message-0"))
         XCTAssertTrue(payload.contains("message-9"))
         let decoded = try JSONSerialization.jsonObject(with: body) as? [String: Any]
         XCTAssertEqual((decoded?["messages"] as? [[String: String]])?.count, 7)
+    }
+
+    func testNIMPromptsAreEnglishAndNameReplyLanguage() {
+        let system = NvidiaNIMProvider.copilotSystemPrompt(snapshotContext: "RAM 50%", replyLanguage: "Turkish")
+        XCTAssertTrue(system.hasPrefix("You are the MacOptimizer Pro macOS assistant."))
+        XCTAssertTrue(system.contains("Reply in Turkish"))
+        XCTAssertTrue(system.contains("RAM 50%"))
+        XCTAssertTrue(NvidiaNIMProvider.diagnosisPrompt("metrics", replyLanguage: "English").contains("Reply in English."))
+
+        let prior = UserDefaults.standard.object(forKey: "AppleLanguages")
+        defer {
+            if let prior { UserDefaults.standard.set(prior, forKey: "AppleLanguages") }
+            else { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        }
+        UserDefaults.standard.set(["tr-TR"], forKey: "AppleLanguages")
+        XCTAssertEqual(L10n.currentLanguageEnglishName(), "Turkish")
+        UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+        XCTAssertEqual(L10n.currentLanguageEnglishName(), "English")
+    }
+
+    func testCopilotKeywordsMatchTurkishAndEnglishInput() async {
+        let service = AIAssistantService()
+        let english = await service.chatWithCopilot(userMessage: "Please clean junk and check for update", history: [],
+                                                    systemContext: "", config: NIMConfig())
+        XCTAssertEqual(english.actions.map(\.type), [.scanJunk, .checkUpdates])
+        let turkish = await service.chatWithCopilot(userMessage: "Önbellek temizle ve DNS sıfırla", history: [],
+                                                    systemContext: "", config: NIMConfig())
+        XCTAssertEqual(turkish.actions.map(\.type), [.scanJunk, .flushDNS])
+        let memory = try? await LocalHeuristicProvider().queryCopilot(messages: [AIChatMessage(role: .user, content: "Why is memory high?")], snapshotContext: "ctx")
+        XCTAssertTrue(memory?.hasSuffix("ctx") == true)
     }
     
     // MARK: - 11. Mach-O Architecture Detector Tests
@@ -635,8 +666,8 @@ final class MacOptimizerTests: XCTestCase {
         
         XCTAssertFalse(alerts.isEmpty, "Watchdog should generate alerts for critical metrics")
         let titles = alerts.map { $0.title }
-        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") }))
-        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") || $0.contains("Memory") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") || $0.contains("Thermal") }))
         XCTAssertTrue(titles.contains(where: { $0.contains("Swap") }))
         XCTAssertTrue(titles.contains(where: { $0.contains("Disk") }))
     }

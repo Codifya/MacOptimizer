@@ -26,7 +26,7 @@ public actor NvidiaNIMService {
     public nonisolated static func redactFilePaths(_ text: String) -> String {
         let pattern = #"(?<!\S)(?:~|/)(?:[^\s<>:"|?*]+/)*[^\s<>:"|?*]+"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
-        return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "[dosya yolu]")
+        return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "[file path]")
     }
     
     // MARK: - Safe Base URL Validator
@@ -37,7 +37,7 @@ public actor NvidiaNIMService {
         }
         
         guard let url = URL(string: base), let scheme = url.scheme?.lowercased() else {
-            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: "Geçersiz Base URL formatı."])
+            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: L10n.string("Invalid Base URL format.", table: .ai)])
         }
         
         let host = url.host?.lowercased() ?? ""
@@ -45,11 +45,11 @@ public actor NvidiaNIMService {
         
         // Disallow insecure HTTP over non-localhost to protect API keys in transit
         if scheme == "http" && !isLocalhost {
-            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: "Güvenlik Uyarısı: Uzak API bağlantıları için HTTPS zorunludur."])
+            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: L10n.string("Security Warning: HTTPS is required for remote API connections.", table: .ai)])
         }
         
         guard scheme == "https" || (scheme == "http" && isLocalhost) else {
-            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: "Desteklenmeyen URL protokolü. (https:// kullanın)"])
+            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: L10n.string("Unsupported URL protocol. (Use https://)", table: .ai)])
         }
         
         return base
@@ -59,12 +59,12 @@ public actor NvidiaNIMService {
     public func fetchAvailableModels(config: NIMConfig) async throws -> [NIMModelOption] {
         let trimmedKey = config.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKey.isEmpty else {
-            throw NSError(domain: "NvidiaNIM", code: 401, userInfo: [NSLocalizedDescriptionKey: "NVIDIA NIM API Anahtarı eksik. Lütfen anahtarınızı girin."])
+            throw NSError(domain: "NvidiaNIM", code: 401, userInfo: [NSLocalizedDescriptionKey: L10n.string("NVIDIA NIM API key is missing. Please enter your key.", table: .ai)])
         }
         
         let base = try validateAndFormatBaseURL(config.baseURL)
         guard let url = URL(string: "\(base)/models") else {
-            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: "Geçersiz /models URL'si."])
+            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: L10n.string("Invalid /models URL.", table: .ai)])
         }
         
         var request = URLRequest(url: url)
@@ -76,20 +76,20 @@ public actor NvidiaNIMService {
         let (data, response) = try await urlSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: "Sunucudan geçersiz HTTP yanıtı alındı."])
+            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: L10n.string("Received an invalid HTTP response from the server.", table: .ai)])
         }
         
         if httpResponse.statusCode != 200 {
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = (errorJson["error"] as? [String: Any])?["message"] as? String ?? errorJson["message"] as? String {
-                throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "NVIDIA NIM Hatası (\(httpResponse.statusCode)): \(message)"])
+                throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: L10n.string("NVIDIA NIM Error (%lld): %@", table: .ai, httpResponse.statusCode, message)])
             }
-            throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Hata Kodu: \(httpResponse.statusCode)"])
+            throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: L10n.string("HTTP Error Code: %lld", table: .ai, httpResponse.statusCode)])
         }
         
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let dataArray = json["data"] as? [[String: Any]] else {
-            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: "Model listesi ayrıştırılamadı."])
+            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: L10n.string("Could not parse the model list.", table: .ai)])
         }
         
         var models: [NIMModelOption] = []
@@ -119,7 +119,7 @@ public actor NvidiaNIMService {
                 id: modelId,
                 name: "\(cleanName) (\(modelId))",
                 provider: providerName,
-                description: "NVIDIA NIM üzerinden taranmış model.",
+                description: L10n.string("Model scanned via NVIDIA NIM.", table: .ai),
                 isRecommended: isRec
             ))
         }
@@ -136,22 +136,22 @@ public actor NvidiaNIMService {
     // MARK: - Test API Connection
     public func testConnection(config: NIMConfig) async -> (success: Bool, message: String) {
         guard !config.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return (false, "NVIDIA NIM API Anahtarı girilmedi. Lütfen 'nvapi-...' ile başlayan anahtarınızı girin.")
+            return (false, L10n.string("No NVIDIA NIM API key entered. Please enter your key starting with 'nvapi-...'.", table: .ai))
         }
         
         // Try testing with models endpoint first, then chat probe
         do {
             let models = try await fetchAvailableModels(config: config)
-            return (true, "NVIDIA NIM bağlantısı başarılı! \(models.count) adet model tarandı.")
+            return (true, L10n.string("NVIDIA NIM connection successful! %lld models scanned.", table: .ai, models.count))
         } catch {
             // Fallback to chat test
             let testPrompt = "Test"
             let messages = [["role": "user", "content": testPrompt]]
             do {
-                _ = try await sendChatCompletion(messages: messages, config: config, systemPrompt: "Kısa yanıt ver.")
-                return (true, "NVIDIA NIM bağlantısı ve model ('\(config.selectedModel)') doğrulandı!")
+                _ = try await sendChatCompletion(messages: messages, config: config, systemPrompt: "Reply briefly.")
+                return (true, L10n.string("NVIDIA NIM connection and model ('%@') verified!", table: .ai, config.selectedModel))
             } catch {
-                return (false, "Bağlantı hatası: \(error.localizedDescription)")
+                return (false, L10n.string("Connection error: %@", table: .ai, error.localizedDescription))
             }
         }
     }
@@ -164,12 +164,12 @@ public actor NvidiaNIMService {
     ) async throws -> String {
         let trimmedKey = config.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKey.isEmpty else {
-            throw NSError(domain: "NvidiaNIM", code: 401, userInfo: [NSLocalizedDescriptionKey: "NVIDIA NIM API Anahtarı eksik."])
+            throw NSError(domain: "NvidiaNIM", code: 401, userInfo: [NSLocalizedDescriptionKey: L10n.string("NVIDIA NIM API key is missing.", table: .ai)])
         }
         
         let base = try validateAndFormatBaseURL(config.baseURL)
         guard let url = URL(string: "\(base)/chat/completions") else {
-            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: "Geçersiz /chat/completions URL formatı."])
+            throw NSError(domain: "NvidiaNIM", code: 400, userInfo: [NSLocalizedDescriptionKey: L10n.string("Invalid /chat/completions URL format.", table: .ai)])
         }
         
         var allMessages: [[String: String]] = []
@@ -189,15 +189,15 @@ public actor NvidiaNIMService {
         let (data, response) = try await urlSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: "Sunucudan geçersiz HTTP yanıtı alındı."])
+            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: L10n.string("Received an invalid HTTP response from the server.", table: .ai)])
         }
         
         if httpResponse.statusCode != 200 {
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = (errorJson["error"] as? [String: Any])?["message"] as? String ?? errorJson["message"] as? String {
-                throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "NVIDIA NIM Hatası (\(httpResponse.statusCode)): \(message)"])
+                throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: L10n.string("NVIDIA NIM Error (%lld): %@", table: .ai, httpResponse.statusCode, message)])
             }
-            throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Hata Kodu: \(httpResponse.statusCode)"])
+            throw NSError(domain: "NvidiaNIM", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: L10n.string("HTTP Error Code: %lld", table: .ai, httpResponse.statusCode)])
         }
         
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -205,7 +205,7 @@ public actor NvidiaNIMService {
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
               let content = message["content"] as? String else {
-            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: "API yanıtı ayrıştırılamadı."])
+            throw NSError(domain: "NvidiaNIM", code: 500, userInfo: [NSLocalizedDescriptionKey: L10n.string("Could not parse the API response.", table: .ai)])
         }
         
         return content.trimmingCharacters(in: .whitespacesAndNewlines)

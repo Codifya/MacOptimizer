@@ -680,7 +680,36 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-psn_0_123456"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "status"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "clean", "--dry-run"]))
-        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "purge-ram"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "version"]))
+    }
+
+    func testBatteryHealthUsesAppleSiliconCapacityAndIntelCapacityShapes() {
+        let appleSilicon = ["AppleRawMaxCapacity": 4_600, "NominalChargeCapacity": 4_550, "DesignCapacity": 5_000]
+        let intel = ["MaxCapacity": 4_000, "DesignCapacity": 5_000]
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: appleSilicon), 92)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: intel), 80)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 6_000, "DesignCapacity": 5_000]), 100)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 1, "DesignCapacity": 0]), 0)
+    }
+
+    func testSecurityScoreAwardsNoFirewallPointsWhenDisabled() {
+        XCTAssertEqual(PrivacyAuditService.score(sip: true, gatekeeper: true, firewall: false, accessibility: false), 55)
+        XCTAssertEqual(PrivacyAuditService.score(sip: nil, gatekeeper: nil, firewall: false, accessibility: false), 0)
+    }
+
+    func testCPUSamplingRequiresTwoValidSamples() {
+        XCTAssertEqual(SystemMonitorService.sampledCPUUsage(previous: [10, 20, 70, 0], current: [20, 25, 145, 0]) ?? -1, 16.6667, accuracy: 0.001)
+        XCTAssertNil(SystemMonitorService.sampledCPUUsage(previous: [1, 2], current: [2, 3]))
+        XCTAssertNil(SystemMonitorService.sampledCPUUsage(previous: [1, 2, 3, 4], current: [1, 2, 3, 4]))
+    }
+
+    func testMaintenanceResultMappingUsesBothCommandExitCodes() async {
+        let service = MaintenanceService { executable, _ in
+            CommandExecutionResult(exitCode: executable == .dscacheutil ? 0 : 1, stdout: "", stderr: "", durationMs: 0)
+        }
+        let result = await service.flushDNSCache()
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.message.contains("mDNSResponder: 1"))
     }
     
     // MARK: - 17. Maintenance Service & App Uninstaller Tests

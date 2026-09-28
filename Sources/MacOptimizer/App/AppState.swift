@@ -354,8 +354,9 @@ public final class AppState: ObservableObject {
         
         let context = """
         Mac Modeli: \(hardwareInfo.modelName) (\(hardwareInfo.chipName)), macOS Sürümü: \(hardwareInfo.osVersion)
-        RAM: Toplam \(ByteFormatter.formatMemory(memoryStats.totalBytes)), Kullanılan %\(Int(memoryStats.usedPercentage * 100)) (\(ByteFormatter.formatMemory(memoryStats.actualUsedBytes))), Pasif \(ByteFormatter.formatMemory(memoryStats.inactiveBytes))
-        CPU: %\(String(format: "%.1f", cpuStats.totalUsage)), Boş Disk: \(ByteFormatter.format(diskStats.freeBytes))
+        RAM: %\(Int(memoryStats.usedPercentage * 100))
+        CPU: %\(String(format: "%.1f", cpuStats.totalUsage)), Boş Disk: %\(Int(diskStats.freePercentage * 100))
+        \(UserDefaults.standard.bool(forKey: "MacOptimizer_IncludeRunningAppNames") ? "Çalışan uygulamalar: " + runningProcesses.prefix(4).map { "\($0.name) (PID: \($0.pid))" }.joined(separator: ", ") : "")
         """
         
         Task {

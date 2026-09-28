@@ -199,23 +199,23 @@ public actor SystemMonitorService: SystemMetricsSampling {
             }
             
             if let powerSource = description[kIOPSPowerSourceStateKey as String] as? String {
-                stats.powerSource = (powerSource == kIOPSACPowerValue as String) ? "AC Adaptör" : "Pil"
+                stats.powerSource = (powerSource == kIOPSACPowerValue as String) ? L10n.string("AC Adapter", table: .services) : L10n.string("Battery", table: .services)
             }
             
             if let timeRemaining = description[kIOPSTimeToEmptyKey as String] as? Int, timeRemaining > 0 {
                 let hours = timeRemaining / 60
                 let mins = timeRemaining % 60
-                stats.timeRemainingFormatted = "\(hours) sa \(mins) dk kaldı"
+                stats.timeRemainingFormatted = L10n.string("%lld h %lld min remaining", table: .services, hours, mins)
             } else if stats.isCharging {
                 if let timeToFull = description[kIOPSTimeToFullChargeKey as String] as? Int, timeToFull > 0 {
                     let hours = timeToFull / 60
                     let mins = timeToFull % 60
-                    stats.timeRemainingFormatted = "Dolmasına: \(hours) sa \(mins) dk"
+                    stats.timeRemainingFormatted = L10n.string("Until full: %lld h %lld min", table: .services, hours, mins)
                 } else {
-                    stats.timeRemainingFormatted = "Şarj Oluyor"
+                    stats.timeRemainingFormatted = L10n.string("Charging", table: .services)
                 }
             } else {
-                stats.timeRemainingFormatted = "Hesaplanıyor..."
+                stats.timeRemainingFormatted = L10n.string("Calculating...", table: .services)
             }
             
             break
@@ -242,9 +242,9 @@ public actor SystemMonitorService: SystemMetricsSampling {
                         stats.healthPercentage = Self.batteryHealthPercentage(properties: props.compactMapValues { $0 as? Int })
                     }
                     if let isPermanentFail = props["PermanentFailureStatus"] as? Int, isPermanentFail != 0 {
-                        stats.condition = "Servis Öneriliyor"
+                        stats.condition = L10n.string("Service Recommended", table: .services)
                     } else if stats.healthPercentage < 80 {
-                        stats.condition = "Pil Sağlığı Zayıf"
+                        stats.condition = L10n.string("Poor Battery Health", table: .services)
                     } else {
                         stats.condition = "Normal"
                     }
@@ -488,13 +488,13 @@ public actor SystemMonitorService: SystemMetricsSampling {
             let minutes = (Int(uptime) % 3600) / 60
             
             if days > 0 {
-                return "\(days) gün, \(hours) saat"
+                return L10n.string("%lld d, %lld h", table: .services, days, hours)
             } else if hours > 0 {
-                return "\(hours) saat, \(minutes) dk"
+                return L10n.string("%lld h, %lld min", table: .services, hours, minutes)
             } else {
-                return "\(minutes) dakika"
+                return L10n.string("%lld min", table: .services, minutes)
             }
         }
-        return "Bilinmiyor"
+        return L10n.string("Unknown", table: .services)
     }
 }

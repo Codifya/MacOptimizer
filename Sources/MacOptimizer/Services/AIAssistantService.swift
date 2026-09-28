@@ -22,14 +22,16 @@ public actor AIAssistantService {
                                 config: NIMConfig) async -> (reply: String, actions: [AIAction]) {
         let lower = userMessage.lowercased()
         var actions: [AIAction] = []
-        if lower.contains("çöp") || lower.contains("önbellek") || lower.contains("gereksiz") || lower.contains("temiz") { actions.append(AIAction(title: "Gereksiz Dosyaları Tara", type: .scanJunk)) }
-        if lower.contains("güncelle") || lower.contains("update") || lower.contains("yeni sürüm") { actions.append(AIAction(title: "Güncellemeleri Denetle", type: .checkUpdates)) }
-        if lower.contains("dns") || lower.contains("ağ") || lower.contains("internet") { actions.append(AIAction(title: "DNS Önbelleğini Sıfırla", type: .flushDNS)) }
+        // Keyword lists cover both Turkish and English user input.
+        if lower.contains("çöp") || lower.contains("önbellek") || lower.contains("gereksiz") || lower.contains("temiz")
+            || lower.contains("junk") || lower.contains("cache") || lower.contains("clean") { actions.append(AIAction(title: L10n.string("Scan for Junk Files", table: .ai), type: .scanJunk)) }
+        if lower.contains("güncelle") || lower.contains("update") || lower.contains("yeni sürüm") || lower.contains("new version") { actions.append(AIAction(title: L10n.string("Check for Updates", table: .ai), type: .checkUpdates)) }
+        if lower.contains("dns") || lower.contains("ağ") || lower.contains("internet") || lower.contains("network") { actions.append(AIAction(title: L10n.string("Reset DNS Cache", table: .ai), type: .flushDNS)) }
         do {
             let reply = try await provider(for: config).queryCopilot(messages: Array(history.suffix(6)), snapshotContext: systemContext)
             return (reply, actions)
         } catch {
-            return ("NVIDIA NIM bağlantı hatası. Yerel öneriler aşağıdaki eylem düğmelerinde sunuluyor.", actions)
+            return (L10n.string("NVIDIA NIM connection error. Local suggestions are offered in the action buttons below.", table: .ai), actions)
         }
     }
 }

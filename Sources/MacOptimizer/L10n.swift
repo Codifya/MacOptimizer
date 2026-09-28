@@ -6,15 +6,26 @@ public enum L10n {
         case common, dashboard, cleanup, ai, services
     }
 
-    public static func string(_ key: String, table: Table = .common) -> String {
+    /// The module localization (e.g. "en", "tr") that `string(_:table:)` resolves against, if any.
+    public static func currentLanguage() -> String? {
         let preferences = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
             ?? Bundle.main.preferredLocalizations
-        let language = preferences.lazy.compactMap { preference in
+        return preferences.lazy.compactMap { preference in
             Bundle.module.localizations.first {
                 preference.caseInsensitiveCompare($0) == .orderedSame
                     || preference.lowercased().hasPrefix($0.lowercased() + "-")
             }
         }.first
+    }
+
+    /// English name of the UI language in use (e.g. "Turkish", "English"), for model instructions.
+    public static func currentLanguageEnglishName() -> String {
+        let code = currentLanguage() ?? Bundle.module.developmentLocalization ?? "en"
+        return Locale(identifier: "en").localizedString(forLanguageCode: code) ?? "English"
+    }
+
+    public static func string(_ key: String, table: Table = .common) -> String {
+        let language = currentLanguage()
         if let language,
            let path = Bundle.module.path(forResource: language, ofType: "lproj"),
            let bundle = Bundle(path: path) {

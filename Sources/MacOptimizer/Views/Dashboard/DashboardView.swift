@@ -232,15 +232,6 @@ public struct DashboardView: View {
                 
                 VStack(spacing: 8) {
                     QuickActionButton(
-                        title: "RAM Belleği Boşalt",
-                        subtitle: "Aktif olmayan önbellekleri serbest bırakır",
-                        icon: "memorychip",
-                        color: .green
-                    ) {
-                        appState.purgeRAM()
-                    }
-                    
-                    QuickActionButton(
                         title: "Gereksiz Dosyaları Tara",
                         subtitle: "Önbellek, log ve kalıntıları tespit et",
                         icon: "trash.fill",

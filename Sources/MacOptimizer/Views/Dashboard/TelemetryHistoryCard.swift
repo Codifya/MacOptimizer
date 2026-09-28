@@ -117,17 +117,7 @@ public struct TelemetryHistoryCard: View {
                     }
                     .frame(height: 140)
                 } else {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 8) {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            Text("Telemetri verileri toplanıyor...")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                    }
+                    ContentUnavailableView("Henüz telemetri örneği yok", systemImage: "chart.xyaxis.line", description: Text("Grafik, gerçek CPU ve bellek örnekleri geldikçe görüntülenecek."))
                     .frame(height: 140)
                 }
                 

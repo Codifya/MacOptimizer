@@ -472,8 +472,8 @@ public final class AppState: ObservableObject {
             await MainActor.run {
                 self.isPurgingMemory = false
                 self.memoryPurgeResult = result
-                self.refreshMetrics()
-                
+
+                self.showNotification(message: result.message)
                 if result.freedBytes > 0 {
                     let report = OptimizationReport(
                         title: "RAM Bellek Boşaltma",

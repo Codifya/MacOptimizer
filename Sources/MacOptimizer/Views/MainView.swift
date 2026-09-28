@@ -181,24 +181,6 @@ public struct MainView: View {
                 
                 Spacer()
                 
-                Button {
-                    appState.purgeRAM()
-                } label: {
-                    if appState.isPurgingMemory {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                    } else {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.green)
-                            .padding(6)
-                            .background(Color.green.opacity(0.15))
-                            .clipShape(Circle())
-                    }
-                }
-                .buttonStyle(.plain)
-                .help("Hızlı RAM Boşalt")
-                .disabled(appState.isPurgingMemory)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)

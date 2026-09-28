@@ -12,7 +12,7 @@ injection in the update screen, deletion paths without preview or confirmation, 
 as successful when commands failed, and documentation that claimed more than the code did. Do not
 use those releases.
 
-## v3.1.0 — Safety release (in progress)
+## v3.1.0 — Safety release (released 2026-09-29)
 
 Done (merged to `main`):
 
@@ -28,16 +28,17 @@ Done (merged to `main`):
 - [x] English and Turkish localization, following the system language.
 - [x] Documentation aligned with the code.
 
-Remaining:
-
-- [ ] One version source for the app, the CLI and the release tag.
-- [ ] Developer ID signing, hardened runtime, notarization and stapling of the DMG.
+- [x] One version source for the app, the CLI and the release tag.
+- [x] Developer ID signing, hardened runtime, notarization and stapling of the DMG.
+- [x] App icon.
 
 ## Later (not scheduled)
 
 - Split `AppState` into smaller feature models and inject services.
 - Merge `Helpers/SafetyGuard` into the `Core/Security` policies.
-- App icon, and applying the menu bar extra setting.
+- Applying the menu bar extra setting.
+- CLI `status`: English-only power source and uptime formatting.
+- Autonomous Guard: keep an alert open when the user cancels the terminate dialog.
 - Verify Homebrew update detection against current `brew` JSON output.
 - Instruments measurements for the figures still marked `REQUIRES_INSTRUMENTS_VALIDATION` in
   [docs/PERFORMANCE_BASELINE.md](docs/PERFORMANCE_BASELINE.md).

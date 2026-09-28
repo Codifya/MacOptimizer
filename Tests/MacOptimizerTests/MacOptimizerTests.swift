@@ -10,14 +10,14 @@ final class MacOptimizerTests: XCTestCase {
         let file = root.appendingPathComponent("keep.txt")
         try Data("safe".utf8).write(to: file)
 
-        XCTAssertThrowsError(try SafeOperationExecutor.removeFile(at: file))
+        XCTAssertThrowsError(try SafeOperationExecutor.removeFile(at: file, policyHomeDirectory: root))
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 
     func testDeletionPolicyRejectsCacheLookalikePath() {
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Library/Caches/../../Documents/keep.txt").path
-        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path))
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let path = home.appendingPathComponent("x/Library/Caches/../../Documents/keep.txt").path
+        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: home))
     }
 
     func testChangedSymlinkTargetFailsExecutorRevalidation() throws {

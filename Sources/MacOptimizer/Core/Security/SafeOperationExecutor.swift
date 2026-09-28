@@ -52,10 +52,10 @@ public struct SafeOperationExecutor: Sendable {
     }
     
     /// Safely removes a file or directory after validating it against the SafetyPolicyEngine.
-    public static func removeFile(at url: URL, moveToTrash: Bool = true, confirmation: Confirmation? = nil) throws -> OperationExecutionResult {
+    public static func removeFile(at url: URL, moveToTrash: Bool = true, confirmation: Confirmation? = nil, policyHomeDirectory: URL? = nil) throws -> OperationExecutionResult {
         let canonicalURL = url.resolvingSymlinksInPath().standardizedFileURL
         let canonicalPath = canonicalURL.path
-        let decision = SafetyPolicyEngine.evaluate(.removeFile(path: canonicalPath))
+        let decision = SafetyPolicyEngine.evaluate(.removeFile(path: canonicalPath), homeDirectory: policyHomeDirectory)
         
         switch decision {
         case .denied(let reason):
@@ -69,7 +69,7 @@ public struct SafeOperationExecutor: Sendable {
             throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Bu işlem için kullanıcı onayı gerekiyor."])
         case .allowed(let risk), .requiresConfirmation(let risk, _):
             let currentURL = url.resolvingSymlinksInPath().standardizedFileURL
-            guard Self.stillResolvesTo(url, expected: canonicalURL), !PathProtectionPolicy.isForbiddenPath(currentURL.path) else {
+            guard Self.stillResolvesTo(url, expected: canonicalURL), !PathProtectionPolicy.isForbiddenPath(currentURL.path, homeDirectory: policyHomeDirectory) else {
                 throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Dosya yolu doğrulamadan sonra değişti."])
             }
             let fm = FileManager.default
@@ -93,7 +93,7 @@ public struct SafeOperationExecutor: Sendable {
                 try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
             } else {
                 // If it's pure cache, we can remove it directly
-                let isCacheOrTemp = PathProtectionPolicy.isCleanableCachePath(canonicalPath)
+                let isCacheOrTemp = PathProtectionPolicy.isCleanableCachePath(canonicalPath, homeDirectory: policyHomeDirectory)
                 if isCacheOrTemp {
                     try fm.removeItem(at: canonicalURL)
                 } else {

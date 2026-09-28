@@ -70,11 +70,6 @@ The safety release. v2.1.0–v3.0.0 contain known safety defects; use v3.1.0 or 
   (#2, #6, #7)
 - Gitleaks runs as a CLI in CI. (#2)
 
-### Release (in progress)
-
-- Developer ID signing, notarization and one version source for the app, the CLI and the tag are
-  being prepared. They are not merged yet.
-
 ## [2.2.0] – [3.0.0] - 2026-08-28
 
 Released the same day as 2.1.0 without changelog entries; see the

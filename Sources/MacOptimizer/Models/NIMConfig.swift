@@ -3,18 +3,14 @@ import Foundation
 /// Defines the selected AI Provider type
 public enum AIProviderType: String, Codable, Sendable, CaseIterable, Identifiable {
     case localHeuristics = "local_heuristics"
-    case ollama = "ollama"
     case nvidiaNIM = "nvidia_nim"
-    case customOpenAI = "custom_openai"
     
     public var id: String { rawValue }
     
     public var displayName: String {
         switch self {
         case .localHeuristics: return "🛡️ Yerel Kural Motoru (100% Çevrimdışı & Güvenli)"
-        case .ollama: return "🦙 Yerel Ollama (Cihaz Üzerinde LLM)"
         case .nvidiaNIM: return "⚡ NVIDIA NIM (Bulut Llama 3.3 / DeepSeek R1)"
-        case .customOpenAI: return "🌐 Özel / OpenAI Uyumlu Uç Nokta"
         }
     }
 }
@@ -95,6 +91,23 @@ public struct NIMConfig: Codable, Sendable, Equatable {
     public var isEnabled: Bool
     public var isManualEntry: Bool
     public var cachedModels: [NIMModelOption]
+
+    private enum CodingKeys: String, CodingKey {
+        case providerType, apiKey, baseURL, selectedModel, temperature, maxTokens, isEnabled, isManualEntry, cachedModels
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        providerType = (try? values.decode(AIProviderType.self, forKey: .providerType)) ?? .localHeuristics
+        apiKey = (try? values.decode(String.self, forKey: .apiKey)) ?? ""
+        baseURL = (try? values.decode(String.self, forKey: .baseURL)) ?? "https://integrate.api.nvidia.com/v1"
+        selectedModel = (try? values.decode(String.self, forKey: .selectedModel)) ?? "meta/llama-3.3-70b-instruct"
+        temperature = (try? values.decode(Double.self, forKey: .temperature)) ?? 0.3
+        maxTokens = (try? values.decode(Int.self, forKey: .maxTokens)) ?? 1024
+        isEnabled = (try? values.decode(Bool.self, forKey: .isEnabled)) ?? false
+        isManualEntry = (try? values.decode(Bool.self, forKey: .isManualEntry)) ?? false
+        cachedModels = (try? values.decode([NIMModelOption].self, forKey: .cachedModels)) ?? []
+    }
     
     public init(
         providerType: AIProviderType = .localHeuristics,

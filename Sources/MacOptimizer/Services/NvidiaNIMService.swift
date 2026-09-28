@@ -13,6 +13,21 @@ public actor NvidiaNIMService {
         config.timeoutIntervalForResource = 30.0
         self.urlSession = URLSession(configuration: config)
     }
+
+    public nonisolated static func requestBody(messages: [[String: String]], config: NIMConfig) throws -> Data {
+        let safeMessages = messages.suffix(7).map { ["role": $0["role"] ?? "user", "content": redactFilePaths($0["content"] ?? "")] }
+        return try JSONSerialization.data(withJSONObject: [
+            "model": config.selectedModel, "messages": safeMessages,
+            "temperature": config.temperature, "max_tokens": config.maxTokens,
+            "top_p": 0.95, "stream": false
+        ])
+    }
+
+    public nonisolated static func redactFilePaths(_ text: String) -> String {
+        let pattern = #"(?<!\S)(?:~|/)(?:[^\s<>:"|?*]+/)*[^\s<>:"|?*]+"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "[dosya yolu]")
+    }
     
     // MARK: - Safe Base URL Validator
     private func validateAndFormatBaseURL(_ rawBase: String) throws -> String {
@@ -163,21 +178,13 @@ public actor NvidiaNIMService {
         }
         allMessages.append(contentsOf: messages)
         
-        let payload: [String: Any] = [
-            "model": config.selectedModel,
-            "messages": allMessages,
-            "temperature": config.temperature,
-            "max_tokens": config.maxTokens,
-            "top_p": 0.95,
-            "stream": false
-        ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(trimmedKey)", forHTTPHeaderField: "Authorization")
         request.setValue("MacOptimizer/2.0", forHTTPHeaderField: "User-Agent")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        request.httpBody = try Self.requestBody(messages: allMessages, config: config)
         
         let (data, response) = try await urlSession.data(for: request)
         

@@ -18,5 +18,11 @@
    * They are never saved in plain text or synced to external servers.
 
 4. **Transparent AI Diagnostics**:
-   * If you choose to use local AI (via Ollama or built-in heuristic rules), **0 bytes** of data leave your computer.
-   * If you enable cloud AI (NVIDIA NIM or custom API), only anonymous hardware metrics (e.g. CPU load %, RAM percentage, disk capacity) are sent to the LLM for diagnosis. No file contents, personal documents, or sensitive paths are ever transmitted.
+   * Built-in local heuristics are the default and work offline. NVIDIA NIM is disabled by default and requires accepting an in-app disclosure before its first request.
+   * NVIDIA NIM receives the Mac hardware model, chip, macOS version, RAM/CPU/disk percentages, detected junk size, and the chat messages sent to the assistant. The API key is sent only as the HTTPS authorization credential and is not part of the request body.
+   * Running app names and process IDs are excluded by default. The separate “Çalışan uygulama adlarını dahil et” setting opts them into NVIDIA NIM requests. File paths and file contents are not included in AI requests.
+
+5. **Other Network Requests**:
+   * App update checks read the configured Sparkle appcasts of installed apps; a feed configured with plain HTTP is contacted over HTTP.
+   * The VS Code update checker contacts the VS Code update API.
+   * Homebrew update and package operations invoke `brew`, which may contact its configured repositories and services.

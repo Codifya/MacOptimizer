@@ -142,7 +142,7 @@
 "High Memory Pressure Warning" = "Yüksek Bellek Baskısı Uyarısı";
 "RAM usage has reached %lld%%. Try closing the apps using the most memory to reduce memory pressure." = "RAM kullanımı %%%lld seviyesine ulaştı. Bellek baskısını azaltmak için en çok bellek kullanan uygulamaları kapatmayı deneyin.";
 "Runaway Process: %@" = "Kaçak Süreç: %@";
-"%@ (PID: %d) is continuously consuming %@ CPU. It may be frozen or overloaded." = "%@ (PID: %d) sürekli olarak %%%@ işlemci tüketiyor. Donmuş veya aşırı yüklenmiş olabilir.";
+"%@ (PID: %d) is continuously consuming %@%% CPU. It may be frozen or overloaded." = "%@ (PID: %d) sürekli olarak %%%@ işlemci tüketiyor. Donmuş veya aşırı yüklenmiş olabilir.";
 "Terminate Process" = "İşlemi Sonlandır";
 "Thermal Throttling / Temperature Warning" = "Termal Kısılma / Sıcaklık Uyarısı";
 "CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware." = "İşlemci sıcaklığı kritik eşiğe ulaştı (%@). Donanımı korumak için yüksek işlemci kullanan uygulamaları kapatın.";

@@ -10,4 +10,58 @@
       <key>other</key><string>NVIDIA NIM üzerinden %lld model bulundu ve listelendi.</string>
     </dict>
   </dict>
+  <key>%lld items cleaned successfully.</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir öğe başarıyla temizlendi.</string>
+      <key>other</key><string>%lld öğe başarıyla temizlendi.</string>
+    </dict>
+  </dict>
+  <key>%lld items skipped.</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir öğe atlandı.</string>
+      <key>other</key><string>%lld öğe atlandı.</string>
+    </dict>
+  </dict>
+  <key>%lld apps found.</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir uygulama bulundu.</string>
+      <key>other</key><string>%lld uygulama bulundu.</string>
+    </dict>
+  </dict>
+  <key>%lld updates available!</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir güncelleme mevcut!</string>
+      <key>other</key><string>%lld güncelleme mevcut!</string>
+    </dict>
+  </dict>
+  <key>%lld associated files deleted.</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir ilişkili dosya silindi.</string>
+      <key>other</key><string>%lld ilişkili dosya silindi.</string>
+    </dict>
+  </dict>
+  <key>%lld duplicate file groups found.</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+    <key>count</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>lld</string>
+      <key>one</key><string>Bir yinelenen dosya grubu bulundu.</string>
+      <key>other</key><string>%lld yinelenen dosya grubu bulundu.</string>
+    </dict>
+  </dict>
 </dict></plist>

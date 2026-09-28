@@ -142,7 +142,7 @@
 "High Memory Pressure Warning" = "High Memory Pressure Warning";
 "RAM usage has reached %lld%%. Try closing the apps using the most memory to reduce memory pressure." = "RAM usage has reached %lld%%. Try closing the apps using the most memory to reduce memory pressure.";
 "Runaway Process: %@" = "Runaway Process: %@";
-"%@ (PID: %d) is continuously consuming %@ CPU. It may be frozen or overloaded." = "%@ (PID: %d) is continuously consuming %@ CPU. It may be frozen or overloaded.";
+"%@ (PID: %d) is continuously consuming %@%% CPU. It may be frozen or overloaded." = "%@ (PID: %d) is continuously consuming %@%% CPU. It may be frozen or overloaded.";
 "Terminate Process" = "Terminate Process";
 "Thermal Throttling / Temperature Warning" = "Thermal Throttling / Temperature Warning";
 "CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware." = "CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware.";

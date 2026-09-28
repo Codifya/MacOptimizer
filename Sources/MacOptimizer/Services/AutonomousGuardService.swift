@@ -85,7 +85,7 @@ public actor AutonomousGuardService {
                 if count >= 3 { // Detected high CPU for 3 consecutive samples
                     let alert = AutonomousAlert(
                         title: L10n.string("Runaway Process: %@", table: .services, proc.name),
-                        message: L10n.string("%@ (PID: %d) is continuously consuming %@ CPU. It may be frozen or overloaded.", table: .services, proc.name, proc.pid, proc.cpuFormatted),
+                        message: L10n.string("%@ (PID: %d) is continuously consuming %@%% CPU. It may be frozen or overloaded.", table: .services, proc.name, proc.pid, String(format: "%.1f", proc.cpuPercentage)),
                         type: .runawayProcess,
                         timestamp: now,
                         isResolved: false,

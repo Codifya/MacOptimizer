@@ -38,3 +38,14 @@
 "Cleaned %@ of junk files successfully." = "%@ gereksiz dosya başarıyla temizlendi.";
 "%@ and all its leftovers (%@) were removed successfully." = "%@ ve tüm kalıntıları (%@) başarıyla kaldırıldı.";
 "Moved %lld duplicate files to Trash (%@ freed)." = "%lld yinelenen dosya Çöp Sepeti’ne taşındı (%@ alan kazanıldı).";
+"Scan cancelled." = "Tarama iptal edildi.";
+"Scan complete." = "Tarama tamamlandı.";
+"Cleaning %@…" = "%@ temizleniyor…";
+"Junk File Cleanup (Dry-Run Approved)" = "Gereksiz Dosya Temizliği (Dry-Run Onaylı)";
+"No errors occurred." = "Hata oluşmadı.";
+"Scanning apps…" = "Uygulamalar taranıyor…";
+"Checking for updates…" = "Güncellemeler kontrol ediliyor…";
+"All apps are up to date." = "Tüm uygulamalar güncel.";
+"%@ Uninstalled" = "%@ Kaldırıldı";
+"Scanning for duplicate files…" = "Yinelenen dosyalar taranıyor…";
+"No duplicate files found." = "Yinelenen dosya bulunamadı.";

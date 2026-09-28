@@ -1,1 +1,24 @@
-{}
+"DNS cache could not be flushed. Administrator permission may be required (dscacheutil: %lld, mDNSResponder: %lld)." = "DNS cache could not be flushed. Administrator permission may be required (dscacheutil: %lld, mDNSResponder: %lld).";
+"DNS and mDNSResponder caches were flushed successfully." = "DNS and mDNSResponder caches were flushed successfully.";
+"QuickLook preview cache was reset." = "QuickLook preview cache was reset.";
+"QuickLook cache could not be reset (exit code: %lld)." = "QuickLook cache could not be reset (exit code: %lld).";
+"LaunchServices database was rebuilt successfully." = "LaunchServices database was rebuilt successfully.";
+"LaunchServices database could not be rebuilt (exit code: %lld)." = "LaunchServices database could not be rebuilt (exit code: %lld).";
+"CoreAudio was restarted." = "CoreAudio was restarted.";
+"CoreAudio could not be restarted; administrator permission may be required (exit code: %lld)." = "CoreAudio could not be restarted; administrator permission may be required (exit code: %lld).";
+"Spotlight search index was reset and reindexing started." = "Spotlight search index was reset and reindexing started.";
+"Spotlight index could not be rebuilt; administrator permission may be required (exit code: %lld)." = "Spotlight index could not be rebuilt; administrator permission may be required (exit code: %lld).";
+"Clipboard contents were cleared safely." = "Clipboard contents were cleared safely.";
+"Refreshing network and DNS caches..." = "Refreshing network and DNS caches...";
+"Resetting QuickLook cache..." = "Resetting QuickLook cache...";
+"Optimization complete!" = "Optimization complete!";
+"Quick Smart Optimization" = "Quick Smart Optimization";
+"System root directories and user data folders cannot be deleted: %@" = "System root directories and user data folders cannot be deleted: %@";
+"The safety policy blocked deletion of this path." = "The safety policy blocked deletion of this path.";
+"This file deletion cannot be undone." = "This file deletion cannot be undone.";
+"macOS kernel and system processes (%@, PID: %lld) cannot be terminated." = "macOS kernel and system processes (%@, PID: %lld) cannot be terminated.";
+"Built-in macOS system apps cannot be uninstalled." = "Built-in macOS system apps cannot be uninstalled.";
+"The %@ app and all its related files will be uninstalled." = "The %@ app and all its related files will be uninstalled.";
+"macOS system launch daemons and services cannot be disabled." = "macOS system launch daemons and services cannot be disabled.";
+"macOS system services cannot be removed." = "macOS system services cannot be removed.";
+"The %@ startup service will be permanently removed." = "The %@ startup service will be permanently removed.";

@@ -34,7 +34,7 @@ public struct JunkCategoryCard: View {
                             Text(group.type.title)
                                 .font(.system(size: 14, weight: .bold))
                             
-                            Text("(\(group.items.count) öğe)")
+                            Text(L10n.string("(%lld items)", table: .cleanup, Int64(group.items.count)))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -54,7 +54,7 @@ public struct JunkCategoryCard: View {
                             .foregroundColor(.primary)
                         
                         if group.selectedCount > 0 && group.selectedCount < group.items.count {
-                            Text("Seçili: \(group.selectedFormatted)")
+                            Text(L10n.string("Selected: %@", table: .cleanup, group.selectedFormatted))
                                 .font(.system(size: 10))
                                 .foregroundColor(.blue)
                         }
@@ -117,7 +117,7 @@ public struct JunkCategoryCard: View {
                                         .foregroundColor(.secondary)
                                 }
                                 .buttonStyle(.plain)
-                                .help("Finder'da Göster")
+                                .help(L10n.string("Show in Finder", table: .cleanup))
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 4)

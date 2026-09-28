@@ -64,17 +64,17 @@ public struct JunkCleanerView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Gereksiz Dosya & Disk Temizleyici")
+                    Text(l10n: "Junk File & Disk Cleaner", table: .cleanup)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
                     if totalJunkBytes > 0 {
-                        Text("Toplam Bulunan: \(ByteFormatter.format(totalJunkBytes)) • Seçili: \(ByteFormatter.format(selectedJunkBytes))")
+                        Text(L10n.string("Total Found: %@ • Selected: %@", table: .cleanup, ByteFormatter.format(totalJunkBytes), ByteFormatter.format(selectedJunkBytes)))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.purple)
                             .lineLimit(1)
                     } else {
-                        Text("Sistem önbellekleri, Xcode kalıntıları, loglar ve tarayıcı verilerini tarayın.")
+                        Text(l10n: "Scan system caches, Xcode leftovers, logs, and browser data.", table: .cleanup)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -90,7 +90,7 @@ public struct JunkCleanerView: View {
                             AnimatedProgressBar(progress: appState.junkScanProgress, gradient: SystemTheme.junkGradient, height: 5)
                             
                             if appState.isScanningJunk {
-                                Button("İptal") {
+                                Button(L10n.string("Cancel Scan", table: .cleanup)) {
                                     appState.cancelJunkScan()
                                 }
                                 .buttonStyle(.plain)
@@ -110,7 +110,7 @@ public struct JunkCleanerView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "magnifyingglass")
-                            Text("Tara")
+                            Text(l10n: "Scan", table: .cleanup)
                         }
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 14)
@@ -123,7 +123,7 @@ public struct JunkCleanerView: View {
                     
                     if selectedJunkBytes > 0 {
                         ActionButton(
-                            title: appState.isCleaningJunk ? "Temizleniyor..." : "Temizle (\(ByteFormatter.format(selectedJunkBytes)))",
+                            title: appState.isCleaningJunk ? L10n.string("Cleaning...", table: .cleanup) : L10n.string("Clean (%@)", table: .cleanup, ByteFormatter.format(selectedJunkBytes)),
                             iconName: "trash.fill",
                             gradient: SystemTheme.junkGradient,
                             isLoading: appState.isCleaningJunk
@@ -161,17 +161,17 @@ public struct JunkCleanerView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(SystemTheme.junkGradient)
                 
-                Text("Gereksiz Dosyalar Henüz Taranmadı")
+                Text(l10n: "Junk Files Not Scanned Yet", table: .cleanup)
                     .font(.system(size: 16, weight: .bold))
                 
-                Text("Disk alanınızı geri kazanmak için sistem önbelleklerini, derleme kalıntılarını ve günlükleri tarayın.")
+                Text(l10n: "Scan system caches, build leftovers, and logs to reclaim disk space.", table: .cleanup)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 400)
                 
                 ActionButton(
-                    title: "Taramayı Başlat",
+                    title: L10n.string("Start Scan", table: .cleanup),
                     iconName: "magnifyingglass",
                     gradient: SystemTheme.junkGradient
                 ) {

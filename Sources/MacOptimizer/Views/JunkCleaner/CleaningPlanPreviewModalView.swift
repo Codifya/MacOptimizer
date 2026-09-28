@@ -51,9 +51,9 @@ public struct CleaningPlanPreviewModalView: View {
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Temizlik Planı & Risk Önizlemesi (Dry-Run)")
+                    Text(l10n: "Cleaning Plan & Risk Preview (Dry-Run)", table: .cleanup)
                         .font(.system(size: 15, weight: .bold))
-                    Text("Disk üzerinde değişiklik yapılmadan önce oluşturulan güvenlik planı.")
+                    Text(l10n: "A safety plan created before any changes are made on disk.", table: .cleanup)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -79,7 +79,7 @@ public struct CleaningPlanPreviewModalView: View {
         GlassCard(cornerRadius: 12, padding: 14) {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Kazanılacak Alan:")
+                    Text(l10n: "Space to be Reclaimed:", table: .cleanup)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Text(ByteFormatter.format(plan.selectedEstimatedBytes))
@@ -91,10 +91,10 @@ public struct CleaningPlanPreviewModalView: View {
                     .frame(height: 32)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Temizlenecek Öğe:")
+                    Text(l10n: "Items to Clean:", table: .cleanup)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    Text("\(plan.selectedCount) Adet")
+                    Text(L10n.string("%lld Items", table: .cleanup, Int64(plan.selectedCount)))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                 }
@@ -103,7 +103,7 @@ public struct CleaningPlanPreviewModalView: View {
                     .frame(height: 32)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Maksimum Risk:")
+                    Text(l10n: "Maximum Risk:", table: .cleanup)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     
@@ -130,10 +130,10 @@ public struct CleaningPlanPreviewModalView: View {
                 .foregroundColor(.green)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("Zero-Harm Savunma Kalkanı Aktif")
+                Text(l10n: "Zero-Harm Protection Shield Active", table: .cleanup)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.primary)
-                Text("Kök sistem dosyaları, kişisel belgeleriniz ve kritik macOS servisleri kesinlikle korunmaktadır. Önbellek dışı dosyalar Çöp Sepeti korumalı olarak taşınır.")
+                Text(l10n: "Root system files, your personal documents, and critical macOS services are strictly protected. Files outside the cache are moved to the Trash safely.", table: .cleanup)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -146,12 +146,12 @@ public struct CleaningPlanPreviewModalView: View {
     // MARK: - Warnings Box
     private var warningsBox: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("Plan Uyarıları", systemImage: "exclamationmark.triangle.fill")
+            Label(L10n.string("Plan Warnings", table: .cleanup), systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.orange)
             
             ForEach(plan.warnings, id: \.self) { warning in
-                Text("• \(warning)")
+                Text(L10n.string("• %@", table: .cleanup, warning))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -165,7 +165,7 @@ public struct CleaningPlanPreviewModalView: View {
     // MARK: - Planned Items Section
     private var plannedItemsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Temizlenecek Dosya ve Klasörler:")
+            Text(l10n: "Files and Folders to Clean:", table: .cleanup)
                 .font(.system(size: 13, weight: .bold))
             
             VStack(spacing: 6) {
@@ -211,7 +211,7 @@ public struct CleaningPlanPreviewModalView: View {
     // MARK: - Footer
     private var footerBar: some View {
         HStack {
-            Button("Vazgeç") {
+            Button(L10n.string("Cancel", table: .cleanup)) {
                 onDismiss()
             }
             .keyboardShortcut(.cancelAction)
@@ -219,7 +219,7 @@ public struct CleaningPlanPreviewModalView: View {
             Spacer()
             
             ActionButton(
-                title: "Planı Onayla ve Temizle (\(ByteFormatter.format(plan.selectedEstimatedBytes)))",
+                title: L10n.string("Approve Plan and Clean (%@)", table: .cleanup, ByteFormatter.format(plan.selectedEstimatedBytes)),
                 iconName: "trash.fill",
                 gradient: SystemTheme.junkGradient,
                 isLoading: appState.isCleaningJunk

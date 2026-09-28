@@ -33,12 +33,12 @@ public struct DuplicateFinderView: View {
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         .alert(isPresented: $showConfirmDelete) {
             Alert(
-                title: Text("Yinelenen Dosyaları Sil"),
-                message: Text("Seçili \(selectedDuplicatesCount) adet kopya dosya Çöp Sepetine taşınacaktır. Orijinal dosyalar korunacaktır. Onaylıyor musunuz?"),
-                primaryButton: .destructive(Text("Çöp Kutusuna Taşı")) {
+                title: Text(l10n: "Delete Duplicate Files", table: .cleanup),
+                message: Text(L10n.string("%lld selected duplicate files will be moved to the Trash. Original files will be kept. Do you confirm?", table: .cleanup, Int64(selectedDuplicatesCount))),
+                primaryButton: .destructive(Text(l10n: "Move to Trash", table: .cleanup)) {
                     appState.cleanDuplicates()
                 },
-                secondaryButton: .cancel(Text("Vazgeç"))
+                secondaryButton: .cancel(Text(L10n.string("Cancel", table: .cleanup)))
             )
         }
     }
@@ -59,11 +59,11 @@ public struct DuplicateFinderView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Yinelenen Dosya Bulucu")
+                        Text(l10n: "Duplicate File Finder", table: .cleanup)
                             .font(.system(size: 16, weight: .bold))
                             .lineLimit(1)
                         
-                        Text("Aynı içeriğe (SHA-256) sahip kopya dosyaları bularak diskinizde gigabaytlarca yer açın.")
+                        Text(l10n: "Find copy files with the same content (SHA-256) and free up gigabytes on your disk.", table: .cleanup)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .lineLimit(2)
@@ -72,7 +72,7 @@ public struct DuplicateFinderView: View {
                     Spacer(minLength: 12)
                     
                     ActionButton(
-                        title: appState.isScanningDuplicates ? "Taranıyor..." : "Yinelenenleri Tara",
+                        title: appState.isScanningDuplicates ? L10n.string("Scanning...", table: .cleanup) : L10n.string("Scan for Duplicates", table: .cleanup),
                         iconName: "magnifyingglass",
                         gradient: SystemTheme.junkGradient,
                         isLoading: appState.isScanningDuplicates
@@ -83,7 +83,7 @@ public struct DuplicateFinderView: View {
                 
                 // Target Folders Filter Chips
                 HStack(spacing: 8) {
-                    Text("Taranacak Dizinler:")
+                    Text(l10n: "Folders to Scan:", table: .cleanup)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                     
@@ -132,7 +132,7 @@ public struct DuplicateFinderView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 
-                Button("Taramayı İptal Et") {
+                Button(L10n.string("Cancel the Scan", table: .cleanup)) {
                     appState.cancelDuplicateScan()
                 }
                 .buttonStyle(.plain)
@@ -162,7 +162,7 @@ public struct DuplicateFinderView: View {
             GlassCard(cornerRadius: 14, padding: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Kazanılacak Toplam Alan:")
+                        Text(l10n: "Total Space to be Reclaimed:", table: .cleanup)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         
@@ -174,7 +174,7 @@ public struct DuplicateFinderView: View {
                     Spacer()
                     
                     ActionButton(
-                        title: appState.isCleaningDuplicates ? "Temizleniyor..." : "Seçilen Kopyaları Çöpe Taşı (\(selectedDuplicatesCount) Dosya)",
+                        title: appState.isCleaningDuplicates ? L10n.string("Cleaning...", table: .cleanup) : L10n.string("Move Selected Copies to Trash (%lld Files)", table: .cleanup, Int64(selectedDuplicatesCount)),
                         iconName: "trash.fill",
                         gradient: SystemTheme.dangerGradient,
                         isLoading: appState.isCleaningDuplicates
@@ -204,14 +204,14 @@ public struct DuplicateFinderView: View {
                 
                 Spacer()
                 
-                Text("\(group.wrappedValue.duplicates.count) Kopya Dosya")
+                Text(L10n.string("%lld Duplicate Files", table: .cleanup, Int64(group.wrappedValue.duplicates.count)))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
             }
             
             // Original File (Preserved)
             HStack(spacing: 8) {
-                MetricBadge(text: "Orijinal (Korunuyor)", colorName: "green")
+                MetricBadge(text: L10n.string("Original (Kept)", table: .cleanup), colorName: "green")
                 
                 Text(group.wrappedValue.original.path)
                     .font(.system(size: 10))
@@ -228,7 +228,7 @@ public struct DuplicateFinderView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Finder'da Göster")
+                .help(L10n.string("Show in Finder", table: .cleanup))
             }
             .padding(6)
             .background(Color.green.opacity(0.06))
@@ -245,7 +245,7 @@ public struct DuplicateFinderView: View {
                     }
                     .buttonStyle(.plain)
                     
-                    MetricBadge(text: "Kopya", colorName: "purple")
+                    MetricBadge(text: L10n.string("Copy", table: .cleanup), colorName: "purple")
                     
                     Text(dup.path)
                         .font(.system(size: 10))
@@ -281,17 +281,17 @@ public struct DuplicateFinderView: View {
                     .font(.system(size: 44))
                     .foregroundStyle(SystemTheme.junkGradient)
                 
-                Text(appState.duplicateStatusMessage.isEmpty ? "Yinelenen Dosya Taraması Yapılmadı" : appState.duplicateStatusMessage)
+                Text(appState.duplicateStatusMessage.isEmpty ? L10n.string("Duplicate File Scan Not Run", table: .cleanup) : appState.duplicateStatusMessage)
                     .font(.system(size: 16, weight: .bold))
                 
-                Text("İndirilenler, Belgeler ve Resimler klasörlerindeki aynı içerikli dosyaları tespit etmek için taramayı başlatın.")
+                Text(l10n: "Start a scan to detect files with identical content in your Downloads, Documents, and Pictures folders.", table: .cleanup)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 420)
                 
                 ActionButton(
-                    title: "Taramayı Başlat",
+                    title: L10n.string("Start Scan", table: .cleanup),
                     iconName: "magnifyingglass",
                     gradient: SystemTheme.junkGradient
                 ) {

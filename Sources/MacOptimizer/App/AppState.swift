@@ -151,7 +151,9 @@ public final class AppState: ObservableObject {
     // Alert / Notification State
     @Published public var activeAlertMessage: String?
     @Published public var showAlert = false
-    @Published public var aiKillConfirmationPID: Int32?
+    /// PID awaiting the user's explicit confirmation before it is sent SIGTERM. Every UI path that
+    /// terminates a process except the Memory screen's own force-quit dialog goes through this.
+    @Published public var pendingTerminationPID: Int32?
     
     public var unresolvedAlertsCount: Int {
         autonomousAlerts.filter { !$0.isResolved }.count
@@ -414,14 +416,24 @@ public final class AppState: ObservableObject {
             }
         case .killProcess:
             if let pid = action.targetPID {
-                aiKillConfirmationPID = pid
+                requestProcessTermination(pid: pid)
             }
         }
     }
 
-    public func confirmAIProcessTermination() {
-        guard let pid = aiKillConfirmationPID else { return }
-        aiKillConfirmationPID = nil
+    /// Asks the user to confirm terminating `pid`; nothing is terminated until they confirm.
+    public func requestProcessTermination(pid: Int32) {
+        pendingTerminationPID = pid
+    }
+
+    public func cancelProcessTermination() {
+        pendingTerminationPID = nil
+    }
+
+    /// Sends SIGTERM (never SIGKILL) to the process the user just confirmed.
+    public func confirmProcessTermination() {
+        guard let pid = pendingTerminationPID else { return }
+        pendingTerminationPID = nil
         killProcess(pid: pid, force: false)
     }
     

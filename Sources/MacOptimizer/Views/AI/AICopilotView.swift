@@ -38,15 +38,6 @@ public struct AICopilotView: View {
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-        .alert(L10n.string("Terminate this process?", table: .ai), isPresented: Binding(
-            get: { appState.aiKillConfirmationPID != nil },
-            set: { if !$0 { appState.aiKillConfirmationPID = nil } }
-        )) {
-            Button("Cancel", role: .cancel) { appState.aiKillConfirmationPID = nil }
-            Button("Terminate Normally", role: .destructive) { appState.confirmAIProcessTermination() }
-        } message: {
-            Text(L10n.string("PID: %lld. SIGTERM will be sent first.", table: .ai, Int64(appState.aiKillConfirmationPID ?? 0)))
-        }
         .onAppear {
             if appState.aiInsights.isEmpty {
                 appState.runAIHealthAnalysis()

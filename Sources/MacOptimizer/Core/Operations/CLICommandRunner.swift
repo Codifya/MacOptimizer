@@ -163,7 +163,8 @@ public struct CLICommandRunner {
           status           Print current CPU, memory, thermal, swap, and disk telemetry.
           clean            Scan for junk files (default: --dry-run).
           clean --execute --yes  Print the plan and move approved items to Trash.
-          --include-trash       Include Trash items in the plan (requires extra confirmation).
+          --include-trash       Also list Trash items; with --execute --yes, permanently delete them
+                                (no confirmation beyond --yes).
           version          Print version and license information.
           help             Show this help menu.
         

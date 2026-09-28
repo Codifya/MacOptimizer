@@ -26,6 +26,20 @@ public struct MainView: View {
                 dismissButton: .default(Text(l10n: "Done"))
             )
         }
+        // Shared confirmation for the dashboard, AI Copilot and Autonomous Guard terminate buttons.
+        .alert(L10n.string("Terminate this process?", table: .ai), isPresented: Binding(
+            get: { appState.pendingTerminationPID != nil },
+            set: { if !$0 { appState.cancelProcessTermination() } }
+        )) {
+            Button(role: .cancel) { appState.cancelProcessTermination() } label: {
+                Text(l10n: "Cancel", table: .ai)
+            }
+            Button(role: .destructive) { appState.confirmProcessTermination() } label: {
+                Text(l10n: "Terminate Normally", table: .ai)
+            }
+        } message: {
+            Text(L10n.string("PID: %lld. SIGTERM will be sent first.", table: .ai, Int64(appState.pendingTerminationPID ?? 0)))
+        }
     }
     
     // MARK: - Sidebar

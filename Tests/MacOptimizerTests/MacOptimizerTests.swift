@@ -844,6 +844,25 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(CLICommandRunner.helpText.contains { "çğıİöşüÇĞÖŞÜ".contains($0) })
     }
 
+    func testCLIHelpDoesNotPromiseExtraTrashConfirmation() {
+        XCTAssertFalse(CLICommandRunner.helpText.contains("extra confirmation"))
+        XCTAssertTrue(CLICommandRunner.helpText.contains("no confirmation beyond --yes"))
+    }
+
+    @MainActor
+    func testProcessTerminationWaitsForExplicitConfirmation() {
+        let state = AppState(startMonitoring: false)
+        state.requestProcessTermination(pid: 4242)
+        XCTAssertEqual(state.pendingTerminationPID, 4242)
+        state.cancelProcessTermination()
+        XCTAssertNil(state.pendingTerminationPID)
+
+        state.executeAIAction(AIAction(title: "Quit", type: .killProcess, targetPID: 4343))
+        XCTAssertEqual(state.pendingTerminationPID, 4343, "AI/watchdog kill actions must only request confirmation")
+        state.cancelProcessTermination()
+        XCTAssertNil(state.pendingTerminationPID)
+    }
+
     func testBatteryHealthUsesAppleSiliconCapacityAndIntelCapacityShapes() {
         let appleSilicon = ["AppleRawMaxCapacity": 4_600, "NominalChargeCapacity": 4_550, "DesignCapacity": 5_000]
         let intel = ["MaxCapacity": 4_000, "DesignCapacity": 5_000]

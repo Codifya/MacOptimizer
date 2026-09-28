@@ -96,7 +96,7 @@ UserDefaults.
 
 Please do not open a public issue for security problems.
 
-1. Email **security@osmancagrigenc.dev** with a description, the affected version, steps to
+1. Email **info@codifya.com** with a description, the affected version, steps to
    reproduce and the impact you expect.
 2. We aim to acknowledge reports within 48 hours and to agree on a fix timeline with you.
 

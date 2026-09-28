@@ -43,6 +43,14 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(PathProtectionPolicy.isCleanableCachePath(cacheItem.path, homeDirectory: home))
     }
 
+    func testPermanentDeletionIsDeniedOutsideInjectedCacheRoots() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let document = home.appendingPathComponent("Documents/file.txt")
+        try FileManager.default.createDirectory(at: document.deletingLastPathComponent(), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        XCTAssertFalse(SafeOperationExecutor.mayDeletePermanently(document.path, policyHomeDirectory: home))
+    }
+
     func testCLIExecuteRequiresYesAndBundleIdentifierValidation() {
         XCTAssertTrue(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute"]))
         XCTAssertFalse(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute", "--yes"]))

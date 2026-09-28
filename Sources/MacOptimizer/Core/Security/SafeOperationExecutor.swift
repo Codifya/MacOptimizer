@@ -50,6 +50,10 @@ public struct SafeOperationExecutor: Sendable {
     static func stillResolvesTo(_ url: URL, expected: URL) -> Bool {
         url.resolvingSymlinksInPath().standardizedFileURL == expected
     }
+
+    static func mayDeletePermanently(_ path: String, policyHomeDirectory: URL? = nil) -> Bool {
+        PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: policyHomeDirectory)
+    }
     
     /// Safely removes a file or directory after validating it against the SafetyPolicyEngine.
     public static func removeFile(at url: URL, moveToTrash: Bool = true, confirmation: Confirmation? = nil, policyHomeDirectory: URL? = nil) throws -> OperationExecutionResult {
@@ -93,7 +97,7 @@ public struct SafeOperationExecutor: Sendable {
                 try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
             } else {
                 // If it's pure cache, we can remove it directly
-                let isCacheOrTemp = PathProtectionPolicy.isCleanableCachePath(canonicalPath, homeDirectory: policyHomeDirectory)
+                let isCacheOrTemp = Self.mayDeletePermanently(canonicalPath, policyHomeDirectory: policyHomeDirectory)
                 if isCacheOrTemp {
                     try fm.removeItem(at: canonicalURL)
                 } else {

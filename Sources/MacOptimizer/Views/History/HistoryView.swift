@@ -263,7 +263,7 @@ public struct HistoryView: View {
                 Text("Henüz Optimizasyon Kaydı Yok")
                     .font(.system(size: 15, weight: .semibold))
                 
-                Text("Yaptığınız RAM boşaltma ve dosya temizleme işlemleri burada listelenecektir.")
+                Text("Yaptığınız dosya temizleme işlemleri burada listelenecektir.")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

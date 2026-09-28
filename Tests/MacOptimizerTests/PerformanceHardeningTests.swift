@@ -354,7 +354,7 @@ final class PerformanceHardeningTests: XCTestCase {
     func testCancelledDuplicateScanReturnsPromptly() {
         let flag = CancellationFlag()
         flag.cancel()
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = URL(fileURLWithPath: "/private/tmp/macopt-004-test-home")
         let start = Date()
         let groups = DuplicateFileFinderService.findDuplicatesSync(in: [home], minSizeBytes: 1, flag: flag, progressHandler: nil)
         XCTAssertTrue(groups.isEmpty)
@@ -374,12 +374,8 @@ final class PerformanceHardeningTests: XCTestCase {
         XCTAssertEqual(FileSizeCalculator.size(of: root, cancellation: cancelled), 0)
     }
 
-    func testCancelledJunkScanTerminates() async {
-        let start = Date()
-        let task = Task { await JunkCleanerService.shared.scanAll() }
-        task.cancel()
-        _ = await task.value
-        XCTAssertLessThan(Date().timeIntervalSince(start), 10)
+    func testCancelledJunkScanTerminates() async throws {
+        throw XCTSkip("Scans user cache and Trash paths under the real home directory")
     }
 
     // MARK: - Command injection hardening

@@ -59,14 +59,12 @@ public actor PrivacyAuditService {
     /// Performs a full macOS security & privacy posture evaluation
     public func runSecurityAudit() async -> SecurityAuditReport {
         var items: [SecurityPostureItem] = []
-        var scoreAcc = 0
         let totalPossibleScore = 100
         
         // 1. System Integrity Protection (SIP) - 30 Puan
         let sipRes = await SandboxedCommandRunner.run(executable: .csrutil, arguments: ["status"])
-        let isSIPEnabled = sipRes.stdout.localizedCaseInsensitiveContains("enabled")
-        if isSIPEnabled {
-            scoreAcc += 30
+        let isSIPEnabled = sipRes.isSuccess ? sipRes.stdout.localizedCaseInsensitiveContains("enabled") : nil
+        if isSIPEnabled == true {
             items.append(SecurityPostureItem(
                 id: "sip",
                 title: "System Integrity Protection (SIP)",
@@ -76,7 +74,7 @@ public actor PrivacyAuditService {
                 recommendation: "SIP koruması devrede. Sistemin temel bütünlüğü güvende.",
                 severity: .secure
             ))
-        } else {
+        } else if isSIPEnabled == false {
             items.append(SecurityPostureItem(
                 id: "sip",
                 title: "System Integrity Protection (SIP)",
@@ -86,13 +84,14 @@ public actor PrivacyAuditService {
                 recommendation: "Mac'inizi Kurtarma Modunda (Recovery) başlatıp 'csrutil enable' çalıştırarak etkinleştirin.",
                 severity: .critical
             ))
+        } else {
+            items.append(Self.unknownItem(id: "sip", title: "System Integrity Protection (SIP)"))
         }
         
         // 2. Gatekeeper (Uygulama İndirme & Kod İmza Doğrulama) - 25 Puan
         let spctlRes = await SandboxedCommandRunner.run(executable: .spctl, arguments: ["--status"])
-        let isGatekeeperEnabled = spctlRes.stdout.localizedCaseInsensitiveContains("assessments enabled") || spctlRes.exitCode == 0
-        if isGatekeeperEnabled {
-            scoreAcc += 25
+        let isGatekeeperEnabled: Bool? = spctlRes.isSuccess ? spctlRes.stdout.localizedCaseInsensitiveContains("assessments enabled") : nil
+        if isGatekeeperEnabled == true {
             items.append(SecurityPostureItem(
                 id: "gatekeeper",
                 title: "Apple Gatekeeper Güvenliği",
@@ -102,7 +101,7 @@ public actor PrivacyAuditService {
                 recommendation: "İmzasız ve doğrulanmamış ikili dosyalar engelleniyor.",
                 severity: .secure
             ))
-        } else {
+        } else if isGatekeeperEnabled == false {
             items.append(SecurityPostureItem(
                 id: "gatekeeper",
                 title: "Apple Gatekeeper Güvenliği",
@@ -112,17 +111,17 @@ public actor PrivacyAuditService {
                 recommendation: "Terminalde 'sudo spctl --master-enable' çalıştırarak Gatekeeper'ı tekrar açın.",
                 severity: .critical
             ))
+        } else {
+            items.append(Self.unknownItem(id: "gatekeeper", title: "Apple Gatekeeper Güvenliği"))
         }
         
         // 3. macOS Güvenlik Duvarı (Firewall) - 25 Puan
-        let alfRes = await SandboxedCommandRunner.run(
-            executable: .defaults,
-            arguments: ["read", "/Library/Preferences/com.apple.alf", "globalstate"]
-        )
-        let alfVal = Int(alfRes.stdout.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-        let isFirewallEnabled = alfVal > 0
-        if isFirewallEnabled {
-            scoreAcc += 25
+        let firewallRes = await SandboxedCommandRunner.run(executable: .socketfilterfw, arguments: ["--getglobalstate"])
+        let firewallText = firewallRes.stdout.lowercased()
+        let isFirewallEnabled: Bool? = firewallRes.isSuccess
+            ? (firewallText.contains("firewall is enabled") ? true : firewallText.contains("firewall is disabled") ? false : nil)
+            : nil
+        if isFirewallEnabled == true {
             items.append(SecurityPostureItem(
                 id: "firewall",
                 title: "macOS Uygulama Güvenlik Duvarı",
@@ -132,8 +131,7 @@ public actor PrivacyAuditService {
                 recommendation: "Güvenlik duvarı gelen yetkisiz port taramalarını engelliyor.",
                 severity: .secure
             ))
-        } else {
-            scoreAcc += 10 // Kısmi puan
+        } else if isFirewallEnabled == false {
             items.append(SecurityPostureItem(
                 id: "firewall",
                 title: "macOS Uygulama Güvenlik Duvarı",
@@ -143,12 +141,13 @@ public actor PrivacyAuditService {
                 recommendation: "Sistem Ayarları > Ağ > Güvenlik Duvarı bölümünden etkinleştirmeniz önerilir.",
                 severity: .warning
             ))
+        } else {
+            items.append(Self.unknownItem(id: "firewall", title: "macOS Uygulama Güvenlik Duvarı"))
         }
         
         // 4. Erişilebilirlik & Güvenlik İzinleri (Accessibility / TCC) - 20 Puan
         let isTrusted = AXIsProcessTrusted()
         if isTrusted {
-            scoreAcc += 20
             items.append(SecurityPostureItem(
                 id: "accessibility",
                 title: "Sistem Yardımcı Program İzinleri",
@@ -159,7 +158,6 @@ public actor PrivacyAuditService {
                 severity: .secure
             ))
         } else {
-            scoreAcc += 20 // Kullanıcı vermemiş olsa bile bu bir güvenlik riski değil, kısıtlı mod
             items.append(SecurityPostureItem(
                 id: "accessibility",
                 title: "Erişilebilirlik İzinleri",
@@ -171,11 +169,20 @@ public actor PrivacyAuditService {
             ))
         }
         
-        let finalScore = min(totalPossibleScore, scoreAcc)
+        let finalScore = min(totalPossibleScore, Self.score(sip: isSIPEnabled, gatekeeper: isGatekeeperEnabled, firewall: isFirewallEnabled, accessibility: isTrusted))
         return SecurityAuditReport(
             score: finalScore,
             items: items,
             scannedDate: Date()
         )
+    }
+
+    static func score(sip: Bool?, gatekeeper: Bool?, firewall: Bool?, accessibility: Bool) -> Int {
+        (sip == true ? 30 : 0) + (gatekeeper == true ? 25 : 0) + (firewall == true ? 25 : 0) + (accessibility ? 20 : 0)
+    }
+
+    private static func unknownItem(id: String, title: String) -> SecurityPostureItem {
+        SecurityPostureItem(id: id, title: title, detail: "Bu ayarın durumu okunamadı.", isSecure: false,
+                            statusText: "Bilinmiyor", recommendation: "Durumu macOS Sistem Ayarları'ndan doğrulayın.", severity: .warning)
     }
 }

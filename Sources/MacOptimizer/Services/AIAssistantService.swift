@@ -22,7 +22,6 @@ public actor AIAssistantService {
                                 config: NIMConfig) async -> (reply: String, actions: [AIAction]) {
         let lower = userMessage.lowercased()
         var actions: [AIAction] = []
-        if lower.contains("ram") || lower.contains("bellek") || lower.contains("boşalt") { actions.append(AIAction(title: "RAM'i Boşalt", type: .purgeRAM)) }
         if lower.contains("çöp") || lower.contains("önbellek") || lower.contains("gereksiz") || lower.contains("temiz") { actions.append(AIAction(title: "Gereksiz Dosyaları Tara", type: .scanJunk)) }
         if lower.contains("güncelle") || lower.contains("update") || lower.contains("yeni sürüm") { actions.append(AIAction(title: "Güncellemeleri Denetle", type: .checkUpdates)) }
         if lower.contains("dns") || lower.contains("ağ") || lower.contains("internet") { actions.append(AIAction(title: "DNS Önbelleğini Sıfırla", type: .flushDNS)) }

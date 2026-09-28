@@ -175,7 +175,7 @@ public struct DashboardView: View {
                     Text("Mac'inizi Tek Tıkla Optimize Edin")
                         .font(.system(size: 15, weight: .bold))
                     
-                    Text("RAM önbelleğini boşaltır, sistem ve tarayıcı önbelleklerini temizler, ağ bağlantılarını yeniler.")
+                    Text("Sistem ve tarayıcı önbelleklerini temizler, ağ bağlantılarını yeniler.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -231,15 +231,6 @@ public struct DashboardView: View {
                     .font(.system(size: 14, weight: .bold))
                 
                 VStack(spacing: 8) {
-                    QuickActionButton(
-                        title: "RAM Belleği Boşalt",
-                        subtitle: "Aktif olmayan önbellekleri serbest bırakır",
-                        icon: "memorychip",
-                        color: .green
-                    ) {
-                        appState.purgeRAM()
-                    }
-                    
                     QuickActionButton(
                         title: "Gereksiz Dosyaları Tara",
                         subtitle: "Önbellek, log ve kalıntıları tespit et",

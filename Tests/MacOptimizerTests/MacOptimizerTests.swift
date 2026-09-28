@@ -3,6 +3,13 @@ import XCTest
 
 final class MacOptimizerTests: XCTestCase {
 
+    func testAutonomousConfigDecodesLegacyPurgeSetting() throws {
+        let legacyJSON = #"{"isWatchdogActive":true,"autoPurgeRAMOnSpike":false,"ramThresholdPercent":85,"autoCleanTemporaryLogsWeekly":true,"notifyOnAnomalies":true,"scanIntervalSeconds":5,"cpuRunawayThresholdPercent":90}"#.data(using: .utf8)!
+        let config = try JSONDecoder().decode(AutonomousConfig.self, from: legacyJSON)
+        XCTAssertTrue(config.isWatchdogActive)
+        XCTAssertEqual(config.ramThresholdPercent, 85)
+    }
+
     func testEmptyTrashRemovesSymlinkEntryButPreservesTarget() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let trash = root.appendingPathComponent("Trash")
@@ -480,6 +487,9 @@ final class MacOptimizerTests: XCTestCase {
         
         XCTAssertFalse(insights.isEmpty)
         XCTAssertTrue(insights.contains(where: { $0.severity == .critical }))
+        let memoryInsight = insights.first(where: { $0.category == "RAM" })
+        XCTAssertTrue(memoryInsight?.actions.isEmpty == true)
+        XCTAssertTrue(memoryInsight?.summary.contains("uygulamaları kapatmayı") == true)
     }
     
     func testNIMRequestPayloadDisclosureAndHistoryLimit() throws {
@@ -616,7 +626,6 @@ final class MacOptimizerTests: XCTestCase {
         
         var config = AutonomousConfig()
         config.isWatchdogActive = true
-        config.autoPurgeRAMOnSpike = false
         
         let alerts = await guardService.evaluateCycle(
             memory: mem,
@@ -674,13 +683,8 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     // MARK: - 16. Developer Junk Cleaner & CLI Runner Tests
-    func testDeveloperCachesScanning() async {
-        let items = await JunkCleanerService.shared.scanCategory(.developerCache)
-        // If developer tools exist on machine, items will be populated; function should not crash or throw
-        for item in items {
-            XCTAssertEqual(item.category, .developerCache)
-            XCTAssertFalse(item.path.isEmpty)
-        }
+    func testDeveloperCachesScanning() async throws {
+        throw XCTSkip("Scans developer cache paths under the real home directory")
     }
     
     func testCLICommandRunnerPSNFiltering() {
@@ -688,7 +692,37 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-psn_0_123456"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "status"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "clean", "--dry-run"]))
-        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "purge-ram"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "version"]))
+    }
+
+    func testBatteryHealthUsesAppleSiliconCapacityAndIntelCapacityShapes() {
+        let appleSilicon = ["AppleRawMaxCapacity": 4_600, "NominalChargeCapacity": 4_550, "DesignCapacity": 5_000]
+        let intel = ["MaxCapacity": 4_000, "DesignCapacity": 5_000]
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: appleSilicon), 92)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: intel), 80)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 96, "DesignCapacity": 5_000]), 96)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 6_000, "DesignCapacity": 5_000]), 100)
+        XCTAssertEqual(SystemMonitorService.batteryHealthPercentage(properties: ["MaxCapacity": 5_000, "DesignCapacity": 0]), 0)
+    }
+
+    func testSecurityScoreAwardsNoFirewallPointsWhenDisabled() {
+        XCTAssertEqual(PrivacyAuditService.score(sip: true, gatekeeper: true, firewall: false, accessibility: false), 55)
+        XCTAssertEqual(PrivacyAuditService.score(sip: nil, gatekeeper: nil, firewall: false, accessibility: false), 0)
+    }
+
+    func testCPUSamplingRequiresTwoValidSamples() {
+        XCTAssertEqual(SystemMonitorService.sampledCPUUsage(previous: [10, 20, 70, 0], current: [20, 25, 145, 0]) ?? -1, 16.6667, accuracy: 0.001)
+        XCTAssertNil(SystemMonitorService.sampledCPUUsage(previous: [1, 2], current: [2, 3]))
+        XCTAssertNil(SystemMonitorService.sampledCPUUsage(previous: [1, 2, 3, 4], current: [1, 2, 3, 4]))
+    }
+
+    func testMaintenanceResultMappingUsesBothCommandExitCodes() async {
+        let service = MaintenanceService { executable, _ in
+            CommandExecutionResult(exitCode: executable == .dscacheutil ? 0 : 1, stdout: "", stderr: "", durationMs: 0)
+        }
+        let result = await service.flushDNSCache()
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.message.contains("mDNSResponder: 1"))
     }
     
     // MARK: - 17. Maintenance Service & App Uninstaller Tests

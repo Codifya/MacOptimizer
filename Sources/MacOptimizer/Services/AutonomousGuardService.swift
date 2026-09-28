@@ -32,7 +32,6 @@ public actor AutonomousGuardService {
     public static let shared = AutonomousGuardService()
     
     private var consecutiveHighCPUCounts: [Int32: Int] = [:]
-    private var lastAutoPurgeTime: Date?
     private var lastThermalAlertTime: Date?
     private var lastSwapAlertTime: Date?
     private var lastDiskAlertTime: Date?
@@ -59,34 +58,15 @@ public actor AutonomousGuardService {
         // 1. RAM Pressure & Spike Rule
         let ramPercent = memory.usedPercentage * 100.0
         if ramPercent >= config.ramThresholdPercent || memory.pressureLevel == .critical {
-            let canAutoPurge = lastAutoPurgeTime == nil || now.timeIntervalSince(lastAutoPurgeTime!) > 60.0 // Cooldown of 60s
-            
-            if config.autoPurgeRAMOnSpike && canAutoPurge {
-                lastAutoPurgeTime = now
-                let purgeResult = await MemoryOptimizerService.shared.purgeMemory()
-                
-                let alert = AutonomousAlert(
-                    title: "Otonom RAM Kurtarma Devreye Girdi",
-                    message: "RAM kullanımı %\(Int(ramPercent)) eşiğini aştı. Otonom motor pasif önbellekleri boşaltarak \(ByteFormatter.formatMemory(purgeResult.freedBytes)) bellek kazandırdı.",
-                    type: .memorySpike,
-                    timestamp: now,
-                    isResolved: true,
-                    autoHealed: true,
-                    action: nil
-                )
-                generatedAlerts.append(alert)
-            } else if !config.autoPurgeRAMOnSpike {
-                let alert = AutonomousAlert(
-                    title: "Yüksek Bellek Baskısı Uyarısı",
-                    message: "RAM kullanımı %\(Int(ramPercent)) seviyesine ulaştı. Performans kaybını önlemek için RAM'i boşaltın.",
-                    type: .memorySpike,
-                    timestamp: now,
-                    isResolved: false,
-                    autoHealed: false,
-                    action: AIAction(title: "RAM'i Boşalt", type: .purgeRAM)
-                )
-                generatedAlerts.append(alert)
-            }
+            generatedAlerts.append(AutonomousAlert(
+                title: "Yüksek Bellek Baskısı Uyarısı",
+                message: "RAM kullanımı %\(Int(ramPercent)) seviyesine ulaştı. Bellek baskısını azaltmak için en çok bellek kullanan uygulamaları kapatmayı deneyin.",
+                type: .memorySpike,
+                timestamp: now,
+                isResolved: false,
+                autoHealed: false,
+                action: nil
+            ))
         }
         
         // 2. Runaway Process Watchdog (>90% CPU for multiple consecutive fresh samples) - ONLY for killable non-system processes
@@ -133,7 +113,7 @@ public actor AutonomousGuardService {
                     timestamp: now,
                     isResolved: false,
                     autoHealed: false,
-                    action: AIAction(title: "RAM'i Boşalt", type: .purgeRAM)
+                    action: nil
                 )
                 generatedAlerts.append(alert)
             }
@@ -146,12 +126,12 @@ public actor AutonomousGuardService {
                 lastSwapAlertTime = now
                 let alert = AutonomousAlert(
                     title: "Yüksek Swap (Takas Alanı) Kullanımı",
-                    message: "Sistem diski üzerinde \(ByteFormatter.formatMemory(memory.swapUsedBytes)) sanal bellek takası kullanılıyor. Bellek tıkanıklığını gidermek için RAM optimizasyonu önerilir.",
+                    message: "Sistem diski üzerinde \(ByteFormatter.formatMemory(memory.swapUsedBytes)) sanal bellek takası kullanılıyor. Bellek baskısını azaltmak için yoğun uygulamaları kapatın.",
                     type: .memorySpike,
                     timestamp: now,
                     isResolved: false,
                     autoHealed: false,
-                    action: AIAction(title: "RAM'i Boşalt", type: .purgeRAM)
+                    action: nil
                 )
                 generatedAlerts.append(alert)
             }

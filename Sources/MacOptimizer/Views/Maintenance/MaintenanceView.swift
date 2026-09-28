@@ -73,18 +73,7 @@ public struct MaintenanceView: View {
                         }
                     }
                     
-                    // 5. RAM Cache Purge
-                    MaintenanceToolCard(
-                        title: "RAM Önbelleğini Boşalt",
-                        description: "macOS sanal bellek sayfalarını ve pasif uygulama kalıntılarını anında serbest bırakır.",
-                        icon: "memorychip.fill",
-                        color: .green,
-                        isLoading: appState.isPurgingMemory
-                    ) {
-                        appState.purgeRAM()
-                    }
-                    
-                    // 6. Spotlight Rebuild
+                    // 5. Spotlight Rebuild
                     MaintenanceToolCard(
                         title: "Spotlight İndeksini Yenile",
                         description: "Dosya arama sistemini sıfırlayarak Spotlight indeksini baştan optimize eder.",

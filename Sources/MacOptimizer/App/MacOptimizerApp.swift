@@ -119,17 +119,8 @@ struct MenuBarView: View {
             
             Divider()
             
-            // Fast Action Buttons
+            // App controls
             HStack(spacing: 8) {
-                ActionButton(
-                    title: appState.isPurgingMemory ? "Boşaltılıyor..." : "RAM Boşalt",
-                    iconName: "memorychip.fill",
-                    gradient: SystemTheme.memoryGradient,
-                    isLoading: appState.isPurgingMemory
-                ) {
-                    appState.purgeRAM()
-                }
-                
                 Button("Ana Paneli Aç") {
                     NSApp.activate(ignoringOtherApps: true)
                 }

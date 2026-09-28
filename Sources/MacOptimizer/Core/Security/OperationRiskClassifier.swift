@@ -73,7 +73,7 @@ public struct OperationRiskClassifier: Sendable {
     
     public static func classifyMaintenanceTask(taskIdentifier: String) -> OperationRisk {
         switch taskIdentifier {
-        case "dns", "quicklook", "clipboard", "purgeRAM":
+        case "dns", "quicklook", "clipboard":
             return .low
         case "spotlight", "trash":
             return .medium

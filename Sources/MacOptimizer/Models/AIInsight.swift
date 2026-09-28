@@ -2,7 +2,7 @@ import Foundation
 
 /// Action type that can be executed directly from AI recommendations or chat
 public enum AIActionType: String, Codable, Sendable, Equatable {
-    case purgeRAM = "purgeRAM"
+    case analyzeSystem = "analyzeSystem"
     case scanJunk = "scanJunk"
     case cleanJunk = "cleanJunk"
     case checkUpdates = "checkUpdates"
@@ -12,7 +12,7 @@ public enum AIActionType: String, Codable, Sendable, Equatable {
     
     public var iconName: String {
         switch self {
-        case .purgeRAM: return "memorychip.fill"
+        case .analyzeSystem: return "waveform.path.ecg"
         case .scanJunk: return "sparkles.square.filled.on.square"
         case .cleanJunk: return "trash.fill"
         case .checkUpdates: return "arrow.triangle.2.circlepath"

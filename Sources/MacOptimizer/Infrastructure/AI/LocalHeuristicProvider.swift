@@ -18,27 +18,27 @@ public struct LocalHeuristicProvider: AIProvider {
         outdatedAppsCount: Int
     ) async -> [AIInsight] {
         var insights: [AIInsight] = []
+        let heaviestApps = topProcesses.filter { $0.isUserApp && !$0.isProtected }.prefix(3)
+        let memoryAdvice = heaviestApps.isEmpty
+            ? "En çok bellek kullanan uygulamaları kapatmayı deneyin."
+            : "Bellek kullanımını azaltmak için şu yoğun uygulamaları kapatmayı deneyin: " + heaviestApps.map { "\($0.name) (\($0.memoryFormatted))" }.joined(separator: ", ") + "."
         
         // 1. Memory Pressure Evaluation
         if memory.pressureLevel == .critical || memory.usedPercentage > 0.88 {
             insights.append(AIInsight(
                 title: "Kritik Bellek Baskısı Tespit Edildi",
-                summary: "RAM kullanımınız %\(Int(memory.usedPercentage * 100)) seviyesinde ve sistem bellek sayfalarını diske sıkıştırmaya başladı. Aktif olmayan önbellekleri boşaltmak yanıt süresini iyileştirir.",
+                summary: "RAM kullanımı %\(Int(memory.usedPercentage * 100)) seviyesinde. \(memoryAdvice)",
                 severity: .critical,
                 category: "RAM",
-                actions: [
-                    AIAction(title: "RAM'i Boşalt", type: .purgeRAM)
-                ]
+                actions: []
             ))
         } else if memory.pressureLevel == .warning || memory.usedPercentage > 0.75 {
             insights.append(AIInsight(
                 title: "Orta Düzey Bellek Yoğunluğu",
-                summary: "Bellek doluluğu %\(Int(memory.usedPercentage * 100)). Bazı pasif uygulamalar RAM önbelleğinde tutuluyor.",
+                summary: "Bellek doluluğu %\(Int(memory.usedPercentage * 100)). \(memoryAdvice)",
                 severity: .warning,
                 category: "RAM",
-                actions: [
-                    AIAction(title: "RAM'i Optimize Et", type: .purgeRAM)
-                ]
+                actions: []
             ))
         }
         
@@ -105,7 +105,7 @@ public struct LocalHeuristicProvider: AIProvider {
         }
         
         if lastUserMsg.contains("ram") || lastUserMsg.contains("bellek") {
-            return "Mac'inizin bellek durumunu inceledim. Gereksiz önbellek sayfalarını boşaltarak RAM'i rahatlatmak için 'RAM'i Boşalt' komutunu kullanabilirsiniz.\n\nSistem Bilgisi:\n\(snapshotContext)"
+            return "Mac'inizin bellek durumunu inceledim. Bellek baskısını azaltmak için en yoğun uygulamaları kapatmayı deneyebilirsiniz.\n\nSistem Bilgisi:\n\(snapshotContext)"
         } else if lastUserMsg.contains("ısın") || lastUserMsg.contains("cpu") || lastUserMsg.contains("fan") {
             return "İşlemci ve donanım telemetrisine göre en çok kaynak tüketen süreçleri Görev Yöneticisi'nden kontrol edebilir, askıda kalan kullanıcı uygulamalarını güvenle sonlandırabilirsiniz."
         } else if lastUserMsg.contains("temiz") || lastUserMsg.contains("disk") || lastUserMsg.contains("yer") {

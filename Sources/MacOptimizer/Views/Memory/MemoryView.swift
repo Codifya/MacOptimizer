@@ -29,7 +29,7 @@ public struct MemoryView: View {
     public var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                // Header & Purge RAM Hero Card
+                // Memory pressure and process guidance
                 ramHeaderHero
                 
                 // Memory Breakdown Bar
@@ -56,7 +56,7 @@ public struct MemoryView: View {
         }
     }
     
-    // MARK: - RAM Header & Purge Hero
+    // MARK: - RAM Status
     private var ramHeaderHero: some View {
         GlassCard(cornerRadius: 18, padding: 18) {
             HStack(spacing: 20) {
@@ -83,34 +83,15 @@ public struct MemoryView: View {
                         )
                     }
                     
-                    Text("Kullanılmayan önbellekleri (inactive memory) ve sistem geçici sayfalarını serbest bırakarak Mac'inizin performansını anında hızlandırın.")
+                    Text("Bellek baskısı yüksekse, aşağıdaki listeden yoğun bellek kullanan uygulamaları kapatabilirsiniz.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                     
-                    if let result = appState.memoryPurgeResult, !appState.isPurgingMemory {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Text(result.message)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.green)
-                                .lineLimit(1)
-                        }
-                        .padding(.top, 2)
-                    }
                 }
                 
                 Spacer(minLength: 12)
                 
-                ActionButton(
-                    title: appState.isPurgingMemory ? "RAM Boşaltılıyor..." : "RAM'i Boşalt",
-                    iconName: "memorychip.fill",
-                    gradient: SystemTheme.memoryGradient,
-                    isLoading: appState.isPurgingMemory
-                ) {
-                    appState.purgeRAM()
-                }
             }
         }
     }

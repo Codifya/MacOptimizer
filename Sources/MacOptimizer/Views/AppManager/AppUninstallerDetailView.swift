@@ -142,7 +142,7 @@ public struct AppUninstallerDetailView: View {
         .alert(isPresented: $showConfirmAlert) {
             Alert(
                 title: Text("\(app.name) Uygulamasını Kaldır"),
-                message: Text("Seçili tüm dosyalar ve uygulama kalıntıları kalıcı olarak silinecektir. Devam edilsin mi?"),
+                message: Text("Uygulama paketi Çöp Sepetine taşınacak. Seçili kalıntılar da Çöp Sepetine taşınacaktır. Devam edilsin mi?"),
                 primaryButton: .destructive(Text("Kalıntılarıyla Kaldır")) {
                     appState.performUninstall()
                     onDismiss()

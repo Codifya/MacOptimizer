@@ -38,6 +38,15 @@ public struct AICopilotView: View {
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+        .alert("İşlem sonlandırılsın mı?", isPresented: Binding(
+            get: { appState.aiKillConfirmationPID != nil },
+            set: { if !$0 { appState.aiKillConfirmationPID = nil } }
+        )) {
+            Button("Vazgeç", role: .cancel) { appState.aiKillConfirmationPID = nil }
+            Button("Normal Olarak Sonlandır", role: .destructive) { appState.confirmAIProcessTermination() }
+        } message: {
+            Text("PID: \(appState.aiKillConfirmationPID ?? 0). Önce SIGTERM gönderilecek.")
+        }
         .onAppear {
             if appState.aiInsights.isEmpty {
                 appState.runAIHealthAnalysis()

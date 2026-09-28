@@ -5,6 +5,9 @@ import SwiftUI
 public struct MaintenanceView: View {
     @ObservedObject var appState: AppState
     @State private var runningTaskName: String?
+    @State private var trashConfirmation = false
+    @State private var pendingTrash: [URL] = []
+    @State private var pendingTrashBytes: Int64 = 0
     
     public var body: some View {
         ScrollView {
@@ -117,9 +120,9 @@ public struct MaintenanceView: View {
                     ) {
                         runTask(id: "trash") {
                             let trashItems = await JunkCleanerService.shared.scanCategory(.trashBin)
-                            let res = await JunkCleanerService.shared.cleanItems(trashItems)
-                            appState.refreshMetrics()
-                            appState.showNotification(message: "Çöp kutusu boşaltıldı (\(ByteFormatter.format(res.freedBytes)) kazanıldı).")
+                            pendingTrash = trashItems.map { URL(fileURLWithPath: $0.path) }
+                            pendingTrashBytes = trashItems.reduce(0) { $0 + $1.sizeBytes }
+                            trashConfirmation = !trashItems.isEmpty
                         }
                     }
                 }
@@ -128,6 +131,20 @@ public struct MaintenanceView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+        .alert("Çöp Kutusu kalıcı olarak boşaltılsın mı?", isPresented: $trashConfirmation) {
+            Button("Vazgeç", role: .cancel) {}
+            Button("Kalıcı Olarak Sil", role: .destructive) {
+                do {
+                    try SafeOperationExecutor.emptyTrash(pendingTrash, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
+                    appState.refreshMetrics()
+                    appState.showNotification(message: "Çöp Kutusu boşaltıldı (\(ByteFormatter.format(pendingTrashBytes))).")
+                } catch {
+                    appState.showNotification(message: "Çöp Kutusu boşaltılamadı: \(error.localizedDescription)")
+                }
+            }
+        } message: {
+            Text("\(pendingTrash.count) öğe, toplam \(ByteFormatter.format(pendingTrashBytes)). Bu işlem geri alınamaz.")
+        }
     }
     
     private var maintenanceHeaderHero: some View {

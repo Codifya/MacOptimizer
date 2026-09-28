@@ -155,6 +155,7 @@ public final class AppState: ObservableObject {
     // Alert / Notification State
     @Published public var activeAlertMessage: String?
     @Published public var showAlert = false
+    @Published public var aiKillConfirmationPID: Int32?
     
     public var unresolvedAlertsCount: Int {
         autonomousAlerts.filter { !$0.isResolved }.count
@@ -403,9 +404,15 @@ public final class AppState: ObservableObject {
             }
         case .killProcess:
             if let pid = action.targetPID {
-                killProcess(pid: pid, force: true)
+                aiKillConfirmationPID = pid
             }
         }
+    }
+
+    public func confirmAIProcessTermination() {
+        guard let pid = aiKillConfirmationPID else { return }
+        aiKillConfirmationPID = nil
+        killProcess(pid: pid, force: false)
     }
     
     public func testNIMConnection() {
@@ -515,19 +522,20 @@ public final class AppState: ObservableObject {
         isOptimizingSmart = true
         smartOptProgress = 0.0
         smartOptStatus = "Başlatılıyor..."
-        
         Task {
-            let report = await MaintenanceService.shared.runSmartOptimization(progressHandler: self.throttledProgress { state, message, progress in
-                state.smartOptStatus = message
-                state.smartOptProgress = progress
-            })
-            
+            let groups = await withTaskGroup(of: [JunkFileItem].self) { group in
+                for category: JunkCategoryType in [.systemCache, .systemLogs, .browserCache] {
+                    group.addTask { await JunkCleanerService.shared.scanCategory(category) }
+                }
+                var items: [JunkFileItem] = []
+                for await result in group { items += result }
+                return items
+            }
+            let plan = await JunkCleanerService.shared.generateCleaningPlan(from: [JunkCategoryGroup(type: .systemCache, items: groups)])
             await MainActor.run {
                 self.isOptimizingSmart = false
-                self.latestReport = report
-                self.addReport(report)
-                self.refreshMetrics()
-                self.showNotification(message: "Akıllı iyileştirme başarıyla tamamlandı! \(report.freedMemoryFormatted) RAM ve \(report.freedDiskFormatted) disk alanı kazanıldı.")
+                self.activeCleaningPlan = plan
+                self.selectedTab = .junkCleaner
             }
         }
     }
@@ -577,7 +585,8 @@ public final class AppState: ObservableObject {
         activeCleaningPlan = nil
         
         Task {
-            let result = await JunkCleanerService.shared.executeCleaningPlan(plan, progressHandler: self.throttledProgress { state, name, progress in
+            let confirmation = SafeOperationExecutor.confirm(plan)
+            let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation, progressHandler: self.throttledProgress { state, name, progress in
                 state.junkStatusMessage = "\(name) temizleniyor..."
                 state.junkScanProgress = progress
             })
@@ -604,41 +613,7 @@ public final class AppState: ObservableObject {
     }
     
     public func cleanSelectedJunk() {
-        guard !isCleaningJunk else { return }
-        isCleaningJunk = true
-        
-        var itemsToClean: [JunkFileItem] = []
-        for group in junkGroups {
-            itemsToClean.append(contentsOf: group.items.filter { $0.isSelected })
-        }
-        
-        guard !itemsToClean.isEmpty else {
-            isCleaningJunk = false
-            return
-        }
-        
-        Task {
-            let result = await JunkCleanerService.shared.cleanItems(itemsToClean, progressHandler: self.throttledProgress { state, name, progress in
-                state.junkStatusMessage = "\(name) temizleniyor..."
-                state.junkScanProgress = progress
-            })
-            
-            await MainActor.run {
-                self.isCleaningJunk = false
-                self.refreshMetrics()
-                self.scanJunk()
-                
-                let report = OptimizationReport(
-                    title: "Gereksiz Dosya Temizliği",
-                    freedMemoryBytes: 0,
-                    freedDiskBytes: result.freedBytes,
-                    details: ["\(result.deletedCount) öğe başarıyla temizlendi."],
-                    durationSeconds: 0.0
-                )
-                self.addReport(report)
-                self.showNotification(message: "\(ByteFormatter.format(result.freedBytes)) gereksiz dosya başarıyla temizlendi.")
-            }
-        }
+        prepareCleaningPlan()
     }
     
     public func toggleJunkGroupSelection(type: JunkCategoryType) {
@@ -723,7 +698,7 @@ public final class AppState: ObservableObject {
         isUninstalling = true
         
         Task {
-            let result = await AppUninstallerService.shared.uninstall(files: self.selectedAppFiles)
+            let result = await AppUninstallerService.shared.uninstall(files: self.selectedAppFiles, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
             await MainActor.run {
                 self.isUninstalling = false
                 self.selectedAppForDetail = nil
@@ -773,7 +748,7 @@ public final class AppState: ObservableObject {
     
     public func removeStartupItem(_ item: LaunchAgentItem) {
         Task {
-            let success = await StartupManagerService.shared.removeItem(item)
+            let success = await StartupManagerService.shared.removeItem(item, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
             if success {
                 await MainActor.run {
                     self.startupItems.removeAll { $0.id == item.id }
@@ -889,7 +864,7 @@ public final class AppState: ObservableObject {
         isCleaningDuplicates = true
         
         Task {
-            let result = await DuplicateFileFinderService.shared.cleanDuplicates(self.duplicateGroups)
+            let result = await DuplicateFileFinderService.shared.cleanDuplicates(self.duplicateGroups, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
             await MainActor.run {
                 self.isCleaningDuplicates = false
                 self.showNotification(message: "\(result.deletedCount) yinelenen dosya Çöp Sepetine taşındı (\(ByteFormatter.format(result.freedBytes)) alan kazanıldı).")

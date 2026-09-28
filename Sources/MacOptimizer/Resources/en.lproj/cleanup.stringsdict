@@ -6,4 +6,29 @@
 <key>items</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
 <key>one</key><string>%lld item</string><key>other</key><string>%lld items</string></dict>
 </dict>
+<key>(%lld items)</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>(%#@count@)</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>(%lld item)</string><key>other</key><string>(%lld items)</string></dict>
+</dict>
+<key>%lld Items</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld Item</string><key>other</key><string>%lld Items</string></dict>
+</dict>
+<key>%lld selected duplicate files will be moved to the Trash. Original files will be kept. Do you confirm?</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@ selected duplicate files will be moved to the Trash. Original files will be kept. Do you confirm?</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld selected duplicate file will be moved to the Trash. Original files will be kept. Do you confirm?</string><key>other</key><string>%lld selected duplicate files will be moved to the Trash. Original files will be kept. Do you confirm?</string></dict>
+</dict>
+<key>Move Selected Copies to Trash (%lld Files)</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>Move Selected Copies to Trash (%#@count@)</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>Move Selected Copies to Trash (%lld File)</string><key>other</key><string>Move Selected Copies to Trash (%lld Files)</string></dict>
+</dict>
+<key>%lld Duplicate Files</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld Duplicate File</string><key>other</key><string>%lld Duplicate Files</string></dict>
+</dict>
 </dict></plist>

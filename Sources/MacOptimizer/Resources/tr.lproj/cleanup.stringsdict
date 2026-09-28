@@ -6,4 +6,29 @@
 <key>items</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
 <key>one</key><string>%lld öğe</string><key>other</key><string>%lld öğe</string></dict>
 </dict>
+<key>(%lld items)</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>(%#@count@)</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>(%lld öğe)</string><key>other</key><string>(%lld öğe)</string></dict>
+</dict>
+<key>%lld Items</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld Adet</string><key>other</key><string>%lld Adet</string></dict>
+</dict>
+<key>%lld selected duplicate files will be moved to the Trash. Original files will be kept. Do you confirm?</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>Seçili %#@count@ adet kopya dosya Çöp Sepetine taşınacaktır. Orijinal dosyalar korunacaktır. Onaylıyor musunuz?</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>Seçili %lld adet kopya dosya Çöp Sepetine taşınacaktır. Orijinal dosyalar korunacaktır. Onaylıyor musunuz?</string><key>other</key><string>Seçili %lld adet kopya dosya Çöp Sepetine taşınacaktır. Orijinal dosyalar korunacaktır. Onaylıyor musunuz?</string></dict>
+</dict>
+<key>Move Selected Copies to Trash (%lld Files)</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>Seçilen Kopyaları Çöpe Taşı (%#@count@ Dosya)</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>Seçilen Kopyaları Çöpe Taşı (%lld Dosya)</string><key>other</key><string>Seçilen Kopyaları Çöpe Taşı (%lld Dosya)</string></dict>
+</dict>
+<key>%lld Duplicate Files</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld Kopya Dosya</string><key>other</key><string>%lld Kopya Dosya</string></dict>
+</dict>
 </dict></plist>

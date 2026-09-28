@@ -104,7 +104,7 @@ public struct AppUpdatesView: View {
                                     .font(.system(size: 13, weight: .bold))
                                     .lineLimit(1)
                                 
-                                MetricBadge(text: app.updateInfo.updateSource.rawValue, colorName: "purple")
+                                MetricBadge(text: app.updateInfo.updateSource.localizedTitle, colorName: "purple")
                             }
                             
                             HStack(spacing: 6) {

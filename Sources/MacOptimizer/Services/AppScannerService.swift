@@ -65,14 +65,14 @@ public final class AppScannerService: Sendable {
                     }
                     processedCount += 1
                     let progress = Double(processedCount) / max(1.0, total)
-                    progressHandler?(app?.name ?? "Taranıyor...", progress)
+                    progressHandler?(app?.name ?? L10n.string("Scanning...", table: .services), progress)
                 }
             }
             
             index = endIndex
         }
         
-        progressHandler?("Tamamlandı", 1.0)
+        progressHandler?(L10n.string("Complete", table: .services), 1.0)
         
         // Sort user apps first, then alphabetically
         return installedApps.sorted {

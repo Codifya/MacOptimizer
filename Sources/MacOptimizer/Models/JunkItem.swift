@@ -14,25 +14,25 @@ public enum JunkCategoryType: String, CaseIterable, Identifiable, Sendable {
     
     public var title: String {
         switch self {
-        case .systemCache: return "Sistem ve Uygulama Önbelleği"
-        case .systemLogs: return "Sistem ve Hata Günlükleri"
-        case .developerCache: return "Geliştirici & Build Kalıntıları"
-        case .browserCache: return "Tarayıcı Önbellekleri"
-        case .trashBin: return "Çöp Sepeti"
-        case .largeFiles: return "Büyük ve Eski Dosyalar"
-        case .appLeftovers: return "Kaldırılmış Uygulama Kalıntıları"
+        case .systemCache: return L10n.string("System and App Cache", table: .services)
+        case .systemLogs: return L10n.string("System and Error Logs", table: .services)
+        case .developerCache: return L10n.string("Developer & Build Leftovers", table: .services)
+        case .browserCache: return L10n.string("Browser Caches", table: .services)
+        case .trashBin: return L10n.string("Trash", table: .services)
+        case .largeFiles: return L10n.string("Large and Old Files", table: .services)
+        case .appLeftovers: return L10n.string("Removed App Leftovers", table: .services)
         }
     }
     
     public var description: String {
         switch self {
-        case .systemCache: return "Uygulamalar ve macOS tarafından oluşturulan geçici önbellek dosyaları."
-        case .systemLogs: return "Eski sistem çökme raporları, hata logları ve tanı dosyaları."
-        case .developerCache: return "Xcode DerivedData, Archives, DeviceSupport, Node/NPM, CocoaPods ve Cargo önbellekleri."
-        case .browserCache: return "Safari, Chrome, Arc, Firefox ve Edge tarayıcılarının web önbellekleri."
-        case .trashBin: return "Kullanıcı çöp kutusunda bekleyen silinmiş dosyalar."
-        case .largeFiles: return "İndirilenler ve Belgeler'de yer kaplayan büyük boyutlu dosyalar (>100 MB)."
-        case .appLeftovers: return "Silinmiş uygulamalardan geriye kalan artık klasör ve ayar dosyaları."
+        case .systemCache: return L10n.string("Temporary cache files created by apps and macOS.", table: .services)
+        case .systemLogs: return L10n.string("Old system crash reports, error logs, and diagnostic files.", table: .services)
+        case .developerCache: return L10n.string("Xcode DerivedData, Archives, DeviceSupport, Node/NPM, CocoaPods, and Cargo caches.", table: .services)
+        case .browserCache: return L10n.string("Web caches of the Safari, Chrome, Arc, Firefox, and Edge browsers.", table: .services)
+        case .trashBin: return L10n.string("Deleted files waiting in the user's Trash.", table: .services)
+        case .largeFiles: return L10n.string("Large files (>100 MB) taking up space in Downloads and Documents.", table: .services)
+        case .appLeftovers: return L10n.string("Leftover folders and settings files from deleted apps.", table: .services)
         }
     }
     

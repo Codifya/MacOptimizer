@@ -54,6 +54,16 @@ public final class DuplicateFileFinderService: Sendable {
         case desktop = "Masaüstü"
         
         public var id: String { rawValue }
+
+        /// Localized display label. Raw values are kept stable (used as `id`) and must not be shown in the UI.
+        public var localizedTitle: String {
+            switch self {
+            case .downloads: return L10n.string("Downloads", table: .services)
+            case .documents: return L10n.string("Documents", table: .services)
+            case .pictures: return L10n.string("Pictures", table: .services)
+            case .desktop: return L10n.string("Desktop", table: .services)
+            }
+        }
         
         public func resolveURL() -> URL {
             let home = FileManager.default.homeDirectoryForCurrentUser
@@ -87,7 +97,7 @@ public final class DuplicateFileFinderService: Sendable {
         progressHandler: (@Sendable (String, Double) -> Void)?
     ) -> [DuplicateFileGroup] {
         let fileManager = FileManager.default
-        progressHandler?("Dosyalar taranıyor ve boyutlar indeksleniyor...", 0.1)
+        progressHandler?(L10n.string("Scanning files and indexing sizes...", table: .services), 0.1)
         
         var sizeMap: [Int64: [URL]] = [:]
         
@@ -125,7 +135,7 @@ public final class DuplicateFileFinderService: Sendable {
         sizeMap.removeAll()
         let totalCandidates = candidateGroups.values.reduce(0) { $0 + $1.count }
         guard totalCandidates > 0, !flag.isCancelled else {
-            progressHandler?("Yinelenen dosya bulunamadı.", 1.0)
+            progressHandler?(L10n.string("No duplicate files found.", table: .services), 1.0)
             return []
         }
         
@@ -146,7 +156,7 @@ public final class DuplicateFileFinderService: Sendable {
                 for fileURL in group where !flag.isCancelled {
                     processedCount += 1
                     let progress = 0.1 + (0.8 * Double(processedCount) / Double(totalCandidates))
-                    progressHandler?("SHA-256 hesaplanıyor: \(fileURL.lastPathComponent)", progress)
+                    progressHandler?(L10n.string("Computing SHA-256: %@", table: .services, fileURL.lastPathComponent), progress)
                     
                     // A file no larger than the prefix is already fully hashed.
                     let fullHash = size <= Int64(partialHashBytes)
@@ -197,7 +207,7 @@ public final class DuplicateFileFinderService: Sendable {
             ))
         }
         
-        progressHandler?("Tarama Tamamlandı", 1.0)
+        progressHandler?(L10n.string("Scan Complete", table: .services), 1.0)
         return resultGroups.sorted { $0.totalWastedBytes > $1.totalWastedBytes }
     }
     

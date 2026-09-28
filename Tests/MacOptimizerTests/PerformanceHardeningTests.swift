@@ -62,11 +62,16 @@ final class PerformanceHardeningTests: XCTestCase {
         cancellable.cancel()
     }
 
+    @MainActor
     func testBoundsAreDeclared() {
-        XCTAssertLessThanOrEqual(AppState.maxAutonomousAlerts, 500)
-        XCTAssertLessThanOrEqual(AppState.maxChatMessages, 200)
-        XCTAssertLessThanOrEqual(AppState.maxOptimizationHistory, 1_000)
-        XCTAssertLessThanOrEqual(AppIconCache.countLimit, 512)
+        let autonomousAlertsLimit = AppState.maxAutonomousAlerts
+        let chatMessagesLimit = AppState.maxChatMessages
+        let optimizationHistoryLimit = AppState.maxOptimizationHistory
+        let iconCacheLimit = AppIconCache.countLimit
+        XCTAssertLessThanOrEqual(autonomousAlertsLimit, 500)
+        XCTAssertLessThanOrEqual(chatMessagesLimit, 200)
+        XCTAssertLessThanOrEqual(optimizationHistoryLimit, 1_000)
+        XCTAssertLessThanOrEqual(iconCacheLimit, 512)
     }
 
     // MARK: - Process execution (deadlock / timeout / cancellation)
@@ -260,14 +265,14 @@ final class PerformanceHardeningTests: XCTestCase {
         policy.visibleCoreInterval = 0.01
         let sampler = FakeSampler()
         var coordinator: MonitoringCoordinator? = MonitoringCoordinator(sampler: sampler, policy: policy)
-        weak var weakCoordinator = coordinator
+        let weakCoordinator = { [weak coordinator] in coordinator }
         coordinator?.start()
         try? await Task.sleep(nanoseconds: 100_000_000)
         coordinator = nil
         try? await Task.sleep(nanoseconds: 200_000_000)
         let calls = sampler.coreCalls
         try? await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertNil(weakCoordinator)
+        XCTAssertNil(weakCoordinator())
         XCTAssertEqual(sampler.coreCalls, calls)
     }
 
@@ -388,6 +393,7 @@ final class PerformanceHardeningTests: XCTestCase {
         XCTAssertFalse(AppUpdateCheckerService.isValidCaskToken(""))
         XCTAssertEqual(AppUpdateCheckerService.caskToken(fromUpgradeCommand: "brew upgrade --cask firefox"), "firefox")
         XCTAssertNil(AppUpdateCheckerService.caskToken(fromUpgradeCommand: "brew upgrade --cask a && curl evil"))
+        XCTAssertNil(AppUpdateCheckerService.caskToken(fromUpgradeCommand: "brew x; curl evil"))
         XCTAssertNil(AppUpdateCheckerService.caskToken(fromUpgradeCommand: "rm -rf /"))
     }
 

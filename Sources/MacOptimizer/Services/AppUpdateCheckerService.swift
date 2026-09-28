@@ -130,8 +130,7 @@ public actor AppUpdateCheckerService {
     }
     
     /// Upgrades a Homebrew cask by executing `brew` directly — no shell, validated token, and a
-    /// timeout sized for real downloads. (The previous UI passed the stored string to `zsh -c` with a
-    /// 15 s timeout: remote appcast data could inject shell commands, and real upgrades were killed.)
+    /// timeout sized for real downloads. Remote appcast data is never interpreted as a command.
     public func upgradeHomebrewCask(token: String) async -> (success: Bool, message: String) {
         guard Self.isValidCaskToken(token) else {
             return (false, "Geçersiz Homebrew paket adı.")

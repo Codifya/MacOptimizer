@@ -8,8 +8,8 @@ public struct AICopilotView: View {
     @State private var chatInputText: String = ""
     
     enum AISubTab: String, CaseIterable, Identifiable {
-        case diagnostics = "Akıllı Teşhis & Rapor"
-        case chat = "AI Copilot Sohbet"
+        case diagnostics
+        case chat
         
         var id: String { rawValue }
     }
@@ -22,7 +22,7 @@ public struct AICopilotView: View {
             // Sub-tabs Picker
             Picker("", selection: $selectedSubTab) {
                 ForEach(AISubTab.allCases) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    Text(l10n: tab.rawValue == AISubTab.diagnostics.rawValue ? "Smart Diagnostics & Report" : "AI Copilot Chat", table: .ai).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
@@ -38,14 +38,14 @@ public struct AICopilotView: View {
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-        .alert("İşlem sonlandırılsın mı?", isPresented: Binding(
+        .alert(L10n.string("Terminate this process?", table: .ai), isPresented: Binding(
             get: { appState.aiKillConfirmationPID != nil },
             set: { if !$0 { appState.aiKillConfirmationPID = nil } }
         )) {
-            Button("Vazgeç", role: .cancel) { appState.aiKillConfirmationPID = nil }
-            Button("Normal Olarak Sonlandır", role: .destructive) { appState.confirmAIProcessTermination() }
+            Button("Cancel", role: .cancel) { appState.aiKillConfirmationPID = nil }
+            Button("Terminate Normally", role: .destructive) { appState.confirmAIProcessTermination() }
         } message: {
-            Text("PID: \(appState.aiKillConfirmationPID ?? 0). Önce SIGTERM gönderilecek.")
+            Text(L10n.string("PID: %lld. SIGTERM will be sent first.", table: .ai, Int64(appState.aiKillConfirmationPID ?? 0)))
         }
         .onAppear {
             if appState.aiInsights.isEmpty {
@@ -70,18 +70,18 @@ public struct AICopilotView: View {
                 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Yapay Zeka Danışmanı & Copilot")
+                        Text(l10n: "AI Advisor & Copilot", table: .ai)
                             .font(.system(size: 16, weight: .bold))
                             .lineLimit(1)
                         
                         if appState.nimConfig.isEnabled && !appState.nimConfig.apiKey.isEmpty {
-                            MetricBadge(text: "NVIDIA NIM: \(appState.nimConfig.selectedModel.split(separator: "/").last ?? "")", colorName: "green")
+                            MetricBadge(text: L10n.string("NVIDIA NIM: %@", table: .ai, String(appState.nimConfig.selectedModel.split(separator: "/").last ?? "")), colorName: "green")
                         } else {
-                            MetricBadge(text: "Yerel AI Motoru", colorName: "blue")
+                            MetricBadge(text: L10n.string("Local AI Engine", table: .ai), colorName: "blue")
                         }
                     }
                     
-                    Text("Mac'inizin performansını, bellek darboğazlarını ve disk birikimlerini yapay zeka ile analiz edin.")
+                    Text(l10n: "Analyze your Mac’s performance, memory pressure, and disk usage with AI.", table: .ai)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -109,7 +109,7 @@ public struct AICopilotView: View {
                     GlassCard(cornerRadius: 16, padding: 36) {
                         VStack(spacing: 12) {
                             ProgressView()
-                            Text("Sistem telemetrisi inceleniyor...")
+                            Text(l10n: "Reviewing system telemetry...", table: .ai)
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
                         }
@@ -188,7 +188,7 @@ public struct AICopilotView: View {
                                                     .foregroundColor(.blue)
                                                     .font(.system(size: 11))
                                             }
-                                            Text(msg.role == .user ? "Siz" : "MacOptimizer AI")
+                                            Text(l10n: msg.role == .user ? "You" : "MacOptimizer AI", table: .ai)
                                                 .font(.system(size: 11, weight: .bold))
                                                 .foregroundColor(.secondary)
                                         }
@@ -236,7 +236,7 @@ public struct AICopilotView: View {
                                     HStack(spacing: 6) {
                                         ProgressView()
                                             .scaleEffect(0.6)
-                                        Text("Yapay zeka yanıtı hazırlıyor...")
+                                        Text(l10n: "Preparing a response...", table: .ai)
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                     }
@@ -262,16 +262,16 @@ public struct AICopilotView: View {
                 // Quick Suggestion Chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        QuickChip(text: "Neden Mac'im ısınıyor?") {
-                            chatInputText = "Mac'imin işlemci ve bellek durumunu analiz et, ısınma sebebi var mı?"
+                        QuickChip(text: L10n.string("Why is my Mac overheating?", table: .ai)) {
+                            chatInputText = L10n.string("Analyze my Mac’s CPU and memory and check what may be causing it to overheat.", table: .ai)
                             sendMessage()
                         }
-                        QuickChip(text: "Gereksiz Dosyaları Tara") {
-                            chatInputText = "Disk alanımı dolduran gereksiz önbellek ve günlükleri tara."
+                        QuickChip(text: L10n.string("Scan for Junk Files", table: .ai)) {
+                            chatInputText = L10n.string("Scan for unnecessary caches and logs taking up disk space.", table: .ai)
                             sendMessage()
                         }
-                        QuickChip(text: "En Çok Kaynak Kullanan 3 Süreç") {
-                            chatInputText = "Şu anda en çok RAM ve CPU harcayan ilk 3 uygulamayı listele."
+                        QuickChip(text: L10n.string("Top 3 Resource-Using Processes", table: .ai)) {
+                            chatInputText = L10n.string("List the top three apps currently using the most RAM and CPU.", table: .ai)
                             sendMessage()
                         }
                     }
@@ -279,7 +279,7 @@ public struct AICopilotView: View {
                 
                 // Input Bar
                 HStack(spacing: 8) {
-                    TextField("Yapay Zekaya bir soru sorun veya komut verin...", text: $chatInputText)
+                    TextField(L10n.string("Ask AI a question or give a command...", table: .ai), text: $chatInputText)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .padding(.horizontal, 10)

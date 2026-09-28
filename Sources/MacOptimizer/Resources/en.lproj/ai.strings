@@ -1,1 +1,23 @@
-{}
+"Smart Diagnostics & Report" = "Smart Diagnostics & Report";
+"AI Copilot Chat" = "AI Copilot Chat";
+"Terminate this process?" = "Terminate this process?";
+"Cancel" = "Cancel";
+"Terminate Normally" = "Terminate Normally";
+"PID: %lld. SIGTERM will be sent first." = "PID: %lld. SIGTERM will be sent first.";
+"AI Advisor & Copilot" = "AI Advisor & Copilot";
+"NVIDIA NIM: %@" = "NVIDIA NIM: %@";
+"Local AI Engine" = "Local AI Engine";
+"Analyze your Mac’s performance, memory pressure, and disk usage with AI." = "Analyze your Mac’s performance, memory pressure, and disk usage with AI.";
+"Analyzing..." = "Analyzing...";
+"Analyze System Again" = "Analyze System Again";
+"Reviewing system telemetry..." = "Reviewing system telemetry...";
+"MacOptimizer AI" = "MacOptimizer AI";
+"You" = "You";
+"Preparing a response..." = "Preparing a response...";
+"Why is my Mac overheating?" = "Why is my Mac overheating?";
+"Analyze my Mac’s CPU and memory and check what may be causing it to overheat." = "Analyze my Mac’s CPU and memory and check what may be causing it to overheat.";
+"Scan for Junk Files" = "Scan for Junk Files";
+"Scan for unnecessary caches and logs taking up disk space." = "Scan for unnecessary caches and logs taking up disk space.";
+"Top 3 Resource-Using Processes" = "Top 3 Resource-Using Processes";
+"List the top three apps currently using the most RAM and CPU." = "List the top three apps currently using the most RAM and CPU.";
+"Ask AI a question or give a command..." = "Ask AI a question or give a command...";

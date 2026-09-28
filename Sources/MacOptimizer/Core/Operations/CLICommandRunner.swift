@@ -2,6 +2,10 @@ import Foundation
 
 /// Headless CLI Command Runner for Terminal usage (`macopt` / `MacOptimizer status|clean|purge-ram|version|--help`).
 public struct CLICommandRunner {
+
+    public static func executionRequestedWithoutConfirmation(_ args: [String]) -> Bool {
+        args.contains("--execute") && !args.contains("--yes")
+    }
     
     public static func shouldHandleCLI(arguments: [String] = CommandLine.arguments) -> Bool {
         guard arguments.count > 1 else { return false }
@@ -22,8 +26,12 @@ public struct CLICommandRunner {
             await printSystemStatus()
             
         case "clean":
-            let isDryRun = args.contains("--dry-run") || !args.contains("--execute")
-            await runJunkClean(dryRun: isDryRun)
+            let execute = args.contains("--execute")
+            if executionRequestedWithoutConfirmation(args) {
+                print("Güvenlik için --execute ile birlikte --yes gerekli.")
+                exit(2)
+            }
+            await runJunkClean(dryRun: !execute, includeTrash: args.contains("--include-trash"))
             
         case "purge-ram":
             await runRAMPurge()
@@ -71,10 +79,12 @@ public struct CLICommandRunner {
         """)
     }
     
-    private static func runJunkClean(dryRun: Bool) async {
+    private static func runJunkClean(dryRun: Bool, includeTrash: Bool) async {
         print("🔍 Gereksiz dosyalar ve önbellekler taranıyor...")
         let groups = await JunkCleanerService.shared.scanAll()
-        let plan = await JunkCleanerService.shared.generateCleaningPlan(from: groups)
+        let trashItems = groups.first(where: { $0.type == .trashBin })?.items ?? []
+        var plan = await JunkCleanerService.shared.generateCleaningPlan(from: groups)
+        if !includeTrash { plan.items = plan.items.filter { $0.category != .trashBin } }
         
         print("\n📊 Bulunan Gereksiz Dosyalar:")
         print("--------------------------------------------------------")
@@ -86,13 +96,24 @@ public struct CLICommandRunner {
         print("Toplam Kurtarılabilir Alan: \(ByteFormatter.format(plan.selectedEstimatedBytes))")
         print("Maksimum Risk Derecesi:   \(plan.maxRiskLevel.displayName)")
         print("Zero-Harm Güvenlik:       Aktif (Sistem kök yolları korumalı)")
+        if includeTrash {
+            print("Çöp Kutusu: \(trashItems.count) öğe (\(ByteFormatter.format(trashItems.reduce(0) { $0 + $1.sizeBytes }))) — kalıcı silme için ayrıca dahil edildi.")
+        }
+        for item in plan.items where item.isSelected {
+            print("  • \(item.name) — \(item.path) (\(item.sizeFormatted))")
+        }
         
         if dryRun {
             print("\n💡 Bilgi: Bu bir önizleme (Dry-Run) çalıştırmasıydı. Temizliği gerçekleştirmek için:")
-            print("   MacOptimizer clean --execute")
+            print("   MacOptimizer clean --execute --yes")
         } else {
-            print("\n🚀 Temizlik başlatılıyor...")
-            let result = await JunkCleanerService.shared.executeCleaningPlan(plan)
+            print("\n🚀 Onaylanan plan başlatılıyor...")
+            let confirmation = SafeOperationExecutor.confirm(plan)
+            let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation)
+            if includeTrash {
+                let result = SafeOperationExecutor.emptyTrash(trashItems.map { URL(fileURLWithPath: $0.path) }, confirmation: confirmation)
+                print("Çöp Kutusu: silinen \(result.removedCount), atlanan \(result.skippedCount), boşalan \(ByteFormatter.format(result.bytesFreed)).")
+            }
             print("✨ Temizlik tamamlandı! \(ByteFormatter.format(result.totalFreedBytes)) alan başarıyla geri kazanıldı.")
         }
     }
@@ -118,7 +139,8 @@ public struct CLICommandRunner {
         Komutlar:
           status           Anlık CPU, RAM, Termal Durum, Swap ve Disk telemetrisini yazdırır.
           clean            Gereksiz dosya taraması yapar (Varsayılan: --dry-run).
-          clean --execute  Bulunan gereksiz önbellekleri Zero-Harm politikalarıyla temizler.
+          clean --execute --yes  Planı yazdırıp onaylanan öğeleri Çöp Sepeti'ne taşır.
+          --include-trash       Çöp Kutusu öğelerini plana ekler (ek onay gerektirir).
           purge-ram        Pasif sistem önbelleklerini temizleyerek RAM boşaltır.
           version          Sürüm ve lisans bilgisini görüntüler.
           help             Bu yardım menüsünü görüntüler.

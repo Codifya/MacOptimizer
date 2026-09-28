@@ -2,6 +2,98 @@ import XCTest
 @testable import MacOptimizer
 
 final class MacOptimizerTests: XCTestCase {
+
+    func testEmptyTrashRemovesSymlinkEntryButPreservesTarget() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let trash = root.appendingPathComponent("Trash")
+        let outside = root.appendingPathComponent("outside.txt")
+        let link = trash.appendingPathComponent("link")
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        try Data("target".utf8).write(to: outside)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = SafeOperationExecutor.emptyTrash([link], confirmation: SafeOperationExecutor.confirm(CleaningPlan()), trashDirectory: trash)
+
+        XCTAssertEqual(result.removedCount, 1)
+        XCTAssertEqual(result.skippedCount, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: link.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+    }
+
+    func testEmptyTrashSkipsEntryOutsideTrashAndRemovesNormalFile() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let trash = root.appendingPathComponent("Trash")
+        let normal = trash.appendingPathComponent("normal.txt")
+        let outside = root.appendingPathComponent("outside.txt")
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        try Data("normal".utf8).write(to: normal)
+        try Data("keep".utf8).write(to: outside)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = SafeOperationExecutor.emptyTrash([normal, outside], confirmation: SafeOperationExecutor.confirm(CleaningPlan()), trashDirectory: trash)
+
+        XCTAssertEqual(result.removedCount, 1)
+        XCTAssertEqual(result.skippedCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: normal.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+    }
+
+    func testExecutorRefusesDestructivePathWithoutConfirmation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("keep.txt")
+        try Data("safe".utf8).write(to: file)
+
+        XCTAssertThrowsError(try SafeOperationExecutor.removeFile(at: file, policyHomeDirectory: root))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    func testDeletionPolicyRejectsCacheLookalikePath() {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let path = home.appendingPathComponent("x/Library/Caches/../../Documents/keep.txt").path
+        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: home))
+    }
+
+    func testChangedSymlinkTargetFailsExecutorRevalidation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let first = root.appendingPathComponent("first")
+        let second = root.appendingPathComponent("second")
+        let link = root.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: first, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: second, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: first)
+        let validated = link.resolvingSymlinksInPath().standardizedFileURL
+        try FileManager.default.removeItem(at: link)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: second)
+        XCTAssertFalse(SafeOperationExecutor.stillResolvesTo(link, expected: validated))
+    }
+
+    func testCleanCacheRootsCanUseTemporaryHome() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let cacheItem = home.appendingPathComponent("Library/Caches/item")
+        try FileManager.default.createDirectory(at: cacheItem, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        XCTAssertTrue(PathProtectionPolicy.isCleanableCachePath(cacheItem.path, homeDirectory: home))
+    }
+
+    func testPermanentDeletionIsDeniedOutsideInjectedCacheRoots() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let document = home.appendingPathComponent("Documents/file.txt")
+        try FileManager.default.createDirectory(at: document.deletingLastPathComponent(), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        XCTAssertFalse(SafeOperationExecutor.mayDeletePermanently(document.path, policyHomeDirectory: home))
+    }
+
+    func testCLIExecuteRequiresYesAndBundleIdentifierValidation() {
+        XCTAssertTrue(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute"]))
+        XCTAssertFalse(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute", "--yes"]))
+        XCTAssertTrue(AppUninstallerService.isValidBundleIdentifier("org.example.App-1"))
+        XCTAssertFalse(AppUninstallerService.isValidBundleIdentifier("org.example/../../Documents"))
+        XCTAssertFalse(AppUninstallerService.isValidBundleIdentifier("org..example"))
+    }
     
     // MARK: - 1. Property-Based Path Protection Tests (50+ Path Variations)
     func testSystemRootPathsForbidden() {

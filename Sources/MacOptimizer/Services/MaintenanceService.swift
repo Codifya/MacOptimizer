@@ -54,7 +54,7 @@ public actor MaintenanceService {
     ) async -> OptimizationReport {
         let startTime = Date()
         var freedRAM: UInt64 = 0
-        var freedDisk: Int64 = 0
+        let freedDisk: Int64 = 0
         var details: [String] = []
         
         // 1. Flush RAM
@@ -63,18 +63,7 @@ public actor MaintenanceService {
         freedRAM = ramResult.freedBytes
         details.append(ramResult.message)
         
-        // 2. Scan and Clean User & System Caches
-        progressHandler?("Gereksiz önbellekler taranıyor...", 0.40)
-        let caches = await JunkCleanerService.shared.scanCategory(.systemCache)
-        let logs = await JunkCleanerService.shared.scanCategory(.systemLogs)
-        let browsers = await JunkCleanerService.shared.scanCategory(.browserCache)
-        
-        let allAutoCleanItems = (caches + logs + browsers).filter { $0.sizeBytes > 0 }
-        
-        progressHandler?("Önbellekler ve günlükler temizleniyor...", 0.65)
-        let cleanResult = await JunkCleanerService.shared.cleanItems(allAutoCleanItems)
-        freedDisk += cleanResult.freedBytes
-        details.append("\(ByteFormatter.format(cleanResult.freedBytes)) gereksiz önbellek ve günlük temizlendi.")
+        // File cleanup requires a reviewed CleaningPlan in the UI.
         
         // 3. Flush DNS Cache
         progressHandler?("Ağ ve DNS önbelleği yenileniyor...", 0.85)

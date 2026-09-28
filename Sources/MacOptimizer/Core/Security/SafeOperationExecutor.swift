@@ -29,11 +29,62 @@ public struct OperationExecutionResult: Sendable {
 
 /// Atomic, policy-governed executor for all filesystem, process, and maintenance operations.
 public struct SafeOperationExecutor: Sendable {
+    public struct TrashResult: Sendable {
+        public let removedCount: Int
+        public let skippedCount: Int
+        public let bytesFreed: Int64
+    }
+
+    public struct Confirmation: Sendable {
+        fileprivate init() {}
+    }
+
+    /// Created only by the UI after presenting the reviewed plan.
+    public static func confirm(_ plan: CleaningPlan) -> Confirmation { Confirmation() }
+
+    public static func emptyTrash(
+        _ items: [URL],
+        confirmation: Confirmation,
+        trashDirectory: URL? = nil
+    ) -> TrashResult {
+        let trash = (trashDirectory ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")).resolvingSymlinksInPath().standardizedFileURL
+        let trashPath = trash.path.hasSuffix("/") ? trash.path : trash.path + "/"
+        var removedCount = 0
+        var skippedCount = 0
+        var bytesFreed: Int64 = 0
+        let fm = FileManager.default
+        for item in items {
+            let entry = item.standardizedFileURL
+            let parent = entry.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+            guard !item.pathComponents.contains(".."), (parent == trash || parent.path.hasPrefix(trashPath)), entry != trash else {
+                skippedCount += 1
+                continue
+            }
+            do {
+                let size = (try? fm.attributesOfItem(atPath: entry.path)[.size] as? Int64) ?? 0
+                try fm.removeItem(at: entry)
+                removedCount += 1
+                bytesFreed += size
+            } catch {
+                skippedCount += 1
+            }
+        }
+        return TrashResult(removedCount: removedCount, skippedCount: skippedCount, bytesFreed: bytesFreed)
+    }
+
+    static func stillResolvesTo(_ url: URL, expected: URL) -> Bool {
+        url.resolvingSymlinksInPath().standardizedFileURL == expected
+    }
+
+    static func mayDeletePermanently(_ path: String, policyHomeDirectory: URL? = nil) -> Bool {
+        PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: policyHomeDirectory)
+    }
     
     /// Safely removes a file or directory after validating it against the SafetyPolicyEngine.
-    public static func removeFile(at url: URL, moveToTrash: Bool = true) throws -> OperationExecutionResult {
-        let canonicalPath = url.resolvingSymlinksInPath().standardizedFileURL.path
-        let decision = SafetyPolicyEngine.evaluate(.removeFile(path: canonicalPath))
+    public static func removeFile(at url: URL, moveToTrash: Bool = true, confirmation: Confirmation? = nil, policyHomeDirectory: URL? = nil) throws -> OperationExecutionResult {
+        let canonicalURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let canonicalPath = canonicalURL.path
+        let decision = SafetyPolicyEngine.evaluate(.removeFile(path: canonicalPath), homeDirectory: policyHomeDirectory)
         
         switch decision {
         case .denied(let reason):
@@ -43,7 +94,13 @@ public struct SafeOperationExecutor: Sendable {
                 userInfo: [NSLocalizedDescriptionKey: "Güvenlik Engeli: \(reason)"]
             )
             
+        case .requiresConfirmation(_, _) where confirmation == nil:
+            throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Bu işlem için kullanıcı onayı gerekiyor."])
         case .allowed(let risk), .requiresConfirmation(let risk, _):
+            let currentURL = url.resolvingSymlinksInPath().standardizedFileURL
+            guard Self.stillResolvesTo(url, expected: canonicalURL), !PathProtectionPolicy.isForbiddenPath(currentURL.path, homeDirectory: policyHomeDirectory) else {
+                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Dosya yolu doğrulamadan sonra değişti."])
+            }
             let fm = FileManager.default
             guard fm.fileExists(atPath: canonicalPath) else {
                 return OperationExecutionResult(
@@ -62,18 +119,15 @@ public struct SafeOperationExecutor: Sendable {
             
             if moveToTrash {
                 var resultingURL: NSURL?
-                try fm.trashItem(at: url, resultingItemURL: &resultingURL)
+                try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
             } else {
                 // If it's pure cache, we can remove it directly
-                let isCacheOrTemp = canonicalPath.contains("/Library/Caches/") ||
-                                    canonicalPath.contains("/Library/Logs/") ||
-                                    canonicalPath.contains("/.Trash") ||
-                                    canonicalPath.contains("/Library/Developer/Xcode/DerivedData")
+                let isCacheOrTemp = Self.mayDeletePermanently(canonicalPath, policyHomeDirectory: policyHomeDirectory)
                 if isCacheOrTemp {
-                    try fm.removeItem(at: url)
+                    try fm.removeItem(at: canonicalURL)
                 } else {
                     var resultingURL: NSURL?
-                    try fm.trashItem(at: url, resultingItemURL: &resultingURL)
+                    try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
                 }
             }
             

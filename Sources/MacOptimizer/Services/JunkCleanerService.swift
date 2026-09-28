@@ -27,6 +27,10 @@ public final class JunkCleanerService: Sendable {
         
         for group in groups {
             for item in group.items {
+                if item.category == .trashBin {
+                    warnings.append("Çöp Sepeti ayrı ve açık onayla boşaltılmalıdır: \(item.name)")
+                    continue
+                }
                 let canonicalPath = URL(fileURLWithPath: item.path).resolvingSymlinksInPath().standardizedFileURL.path
                 let risk = OperationRiskClassifier.classifyFileRemoval(path: canonicalPath)
                 
@@ -59,6 +63,7 @@ public final class JunkCleanerService: Sendable {
     // MARK: - Plan Execution with SafeOperationExecutor
     public func executeCleaningPlan(
         _ plan: CleaningPlan,
+        confirmation: SafeOperationExecutor.Confirmation,
         progressHandler: (@Sendable (String, Double) -> Void)? = nil
     ) async -> CleaningExecutionResult {
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -74,7 +79,7 @@ public final class JunkCleanerService: Sendable {
             let progress = Double(idx) / max(1.0, totalCount)
             progressHandler?(item.name, progress)
             
-            let outcome = await Self.remove(path: item.path, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
+            let outcome = await Self.remove(path: item.path, confirmation: confirmation)
             switch outcome {
             case .success(let result) where result.success:
                 totalFreed += (result.bytesFreed > 0 ? result.bytesFreed : item.sizeBytes)
@@ -170,9 +175,9 @@ public final class JunkCleanerService: Sendable {
     }
     
     /// Removes one item off the cooperative pool (trashing or deleting large trees can take seconds).
-    private static func remove(path: String, moveToTrash: Bool) async -> Result<OperationExecutionResult, Error> {
+    private static func remove(path: String, confirmation: SafeOperationExecutor.Confirmation) async -> Result<OperationExecutionResult, Error> {
         await runBlocking(qos: .userInitiated) { _ in
-            Result { try SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: path), moveToTrash: moveToTrash) }
+            Result { try SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: path), moveToTrash: true, confirmation: confirmation) }
         }
     }
     
@@ -301,7 +306,7 @@ public final class JunkCleanerService: Sendable {
                 name: url.lastPathComponent,
                 sizeBytes: size,
                 category: .trashBin,
-                isSelected: true,
+                isSelected: false,
                 detail: "Çöp Sepetinde",
                 lastModifiedDate: modDate
             ))
@@ -432,30 +437,6 @@ public final class JunkCleanerService: Sendable {
         }
         
         return items
-    }
-    
-    // MARK: - Legacy Cleaning Execution (Backwards compatibility)
-    public func cleanItems(_ items: [JunkFileItem], progressHandler: (@Sendable (String, Double) -> Void)? = nil) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
-        var totalFreed: Int64 = 0
-        var deleted = 0
-        var failed = 0
-        let totalItems = Double(items.count)
-        
-        for (index, item) in items.enumerated() {
-            let progress = Double(index) / max(1.0, totalItems)
-            progressHandler?(item.name, progress)
-            
-            let outcome = await Self.remove(path: item.path, moveToTrash: item.category == .appLeftovers || item.category == .largeFiles)
-            if case .success(let res) = outcome, res.success {
-                totalFreed += (res.bytesFreed > 0 ? res.bytesFreed : item.sizeBytes)
-                deleted += 1
-            } else {
-                failed += 1
-            }
-        }
-        
-        progressHandler?("Temizlik Tamamlandı", 1.0)
-        return (totalFreed, deleted, failed)
     }
     
     // MARK: - Optimized Directory Sizing

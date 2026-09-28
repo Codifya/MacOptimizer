@@ -38,17 +38,17 @@ public enum OperationRisk: String, Comparable, CaseIterable, Sendable, Codable {
 /// Classifies operations based on target type, path, process, and parameters.
 public struct OperationRiskClassifier: Sendable {
     
-    public static func classifyFileRemoval(path: String) -> OperationRisk {
+    public static func classifyFileRemoval(path: String, homeDirectory: URL? = nil) -> OperationRisk {
         let url = URL(fileURLWithPath: path).resolvingSymlinksInPath()
         let canonicalPath = url.standardizedFileURL.path
         
         // 1. Check if path is in forbidden system or root user paths
-        if PathProtectionPolicy.isForbiddenPath(canonicalPath) {
+        if PathProtectionPolicy.isForbiddenPath(canonicalPath, homeDirectory: homeDirectory) {
             return .forbidden
         }
         
         // 2. Check if path is in approved cache / logs / trash subdirectories
-        if PathProtectionPolicy.isCleanableCachePath(canonicalPath) {
+        if PathProtectionPolicy.isCleanableCachePath(canonicalPath, homeDirectory: homeDirectory) {
             if canonicalPath.contains("/.Trash") {
                 return .medium
             }

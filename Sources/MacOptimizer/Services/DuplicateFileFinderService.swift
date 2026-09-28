@@ -226,11 +226,11 @@ public final class DuplicateFileFinderService: Sendable {
     }
     
     /// Safely cleans selected duplicate files by moving them to .Trash
-    public func cleanDuplicates(_ groups: [DuplicateFileGroup]) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
-        await runBlocking(qos: .userInitiated) { _ in Self.cleanDuplicatesSync(groups) }
+    public func cleanDuplicates(_ groups: [DuplicateFileGroup], confirmation: SafeOperationExecutor.Confirmation) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
+        await runBlocking(qos: .userInitiated) { _ in Self.cleanDuplicatesSync(groups, confirmation: confirmation) }
     }
     
-    private static func cleanDuplicatesSync(_ groups: [DuplicateFileGroup]) -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
+    private static func cleanDuplicatesSync(_ groups: [DuplicateFileGroup], confirmation: SafeOperationExecutor.Confirmation) -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
         var totalFreed: Int64 = 0
         var deleted = 0
         var failed = 0
@@ -239,7 +239,7 @@ public final class DuplicateFileFinderService: Sendable {
             for dup in group.duplicates where dup.isSelectedForDeletion {
                 let url = URL(fileURLWithPath: dup.path)
                 do {
-                    let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: true)
+                    let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: true, confirmation: confirmation)
                     if result.success {
                         totalFreed += dup.sizeBytes
                         deleted += 1

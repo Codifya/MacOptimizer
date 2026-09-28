@@ -30,15 +30,15 @@ public enum OperationTarget: Sendable {
 public struct SafetyPolicyEngine: Sendable {
     
     /// Evaluates any requested system operation against the safety policy matrix.
-    public static func evaluate(_ target: OperationTarget) -> PolicyDecision {
+    public static func evaluate(_ target: OperationTarget, homeDirectory: URL? = nil) -> PolicyDecision {
         switch target {
         case .removeFile(let path):
             let canonical = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
-            if PathProtectionPolicy.isForbiddenPath(canonical) {
+            if PathProtectionPolicy.isForbiddenPath(canonical, homeDirectory: homeDirectory) {
                 return .denied(reason: "Sistem kök dizinleri veya kullanıcı ana veri klasörleri silinemez: \(canonical)")
             }
             
-            let risk = OperationRiskClassifier.classifyFileRemoval(path: canonical)
+            let risk = OperationRiskClassifier.classifyFileRemoval(path: canonical, homeDirectory: homeDirectory)
             if risk == .forbidden {
                 return .denied(reason: "Güvenlik politikası bu yolun silinmesini engelledi.")
             }

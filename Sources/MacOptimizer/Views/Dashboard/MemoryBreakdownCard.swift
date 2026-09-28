@@ -18,12 +18,12 @@ public struct MemoryBreakdownCard: View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Bellek Dağılımı", systemImage: "chart.bar.xaxis")
+                    Label(L10n.string("Memory Breakdown", table: .dashboard), systemImage: "chart.bar.xaxis")
                         .font(.system(size: 15, weight: .bold))
                     
                     Spacer()
                     
-                    Text("Toplam: \(ByteFormatter.formatMemory(stats.totalBytes))")
+                    Text(L10n.string("Total: %@", table: .dashboard, ByteFormatter.formatMemory(stats.totalBytes)))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -62,14 +62,14 @@ public struct MemoryBreakdownCard: View {
                 
                 // Legend (Responsive Adaptive Columns)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
-                    LegendItem(color: .blue, label: "Aktif", value: ByteFormatter.formatMemory(stats.activeBytes))
-                    LegendItem(color: .purple, label: "Kablolu (Wired)", value: ByteFormatter.formatMemory(stats.wiredBytes))
-                    LegendItem(color: .orange, label: "Sıkıştırılmış", value: ByteFormatter.formatMemory(stats.compressedBytes))
-                    LegendItem(color: .teal, label: "Pasif (Önbellek)", value: ByteFormatter.formatMemory(stats.inactiveBytes))
-                    LegendItem(color: .green, label: "Tamamen Boş", value: ByteFormatter.formatMemory(stats.freeBytes))
-                    LegendItem(color: .indigo, label: "Kullanılabilir", value: ByteFormatter.formatMemory(stats.freeAndInactiveBytes))
+                    LegendItem(color: .blue, label: L10n.string("Active memory", table: .dashboard), value: ByteFormatter.formatMemory(stats.activeBytes))
+                    LegendItem(color: .purple, label: L10n.string("Wired", table: .dashboard), value: ByteFormatter.formatMemory(stats.wiredBytes))
+                    LegendItem(color: .orange, label: L10n.string("Compressed", table: .dashboard), value: ByteFormatter.formatMemory(stats.compressedBytes))
+                    LegendItem(color: .teal, label: L10n.string("Inactive (Cache)", table: .dashboard), value: ByteFormatter.formatMemory(stats.inactiveBytes))
+                    LegendItem(color: .green, label: L10n.string("Free", table: .dashboard), value: ByteFormatter.formatMemory(stats.freeBytes))
+                    LegendItem(color: .indigo, label: L10n.string("Available", table: .dashboard), value: ByteFormatter.formatMemory(stats.freeAndInactiveBytes))
                     if stats.swapTotalBytes > 0 {
-                        LegendItem(color: .red, label: "Swap (Takas Alanı)", value: "\(ByteFormatter.formatMemory(stats.swapUsedBytes)) / \(ByteFormatter.formatMemory(stats.swapTotalBytes))")
+                        LegendItem(color: .red, label: L10n.string("Swap", table: .dashboard), value: "\(ByteFormatter.formatMemory(stats.swapUsedBytes)) / \(ByteFormatter.formatMemory(stats.swapTotalBytes))")
                     }
                 }
             }

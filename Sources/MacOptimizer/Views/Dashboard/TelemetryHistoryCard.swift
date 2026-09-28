@@ -12,9 +12,9 @@ public struct TelemetryHistoryCard: View {
     private var samples: RingBuffer<TelemetryChartSample> { metrics.chartHistory }
     
     enum MetricType: String, CaseIterable, Identifiable {
-        case both = "Tümü"
-        case cpu = "İşlemci (CPU)"
-        case ram = "Bellek (RAM)"
+        case both = "All"
+        case cpu = "Processor (CPU)"
+        case ram = "Memory (RAM)"
         
         var id: String { rawValue }
     }
@@ -117,7 +117,7 @@ public struct TelemetryHistoryCard: View {
                     }
                     .frame(height: 140)
                 } else {
-                    ContentUnavailableView("Henüz telemetri örneği yok", systemImage: "chart.xyaxis.line", description: Text("Grafik, gerçek CPU ve bellek örnekleri geldikçe görüntülenecek."))
+                    ContentUnavailableView(L10n.string("No telemetry samples yet", table: .dashboard), systemImage: "chart.xyaxis.line", description: Text(l10n: "The chart will appear as real CPU and memory samples arrive.", table: .dashboard))
                     .frame(height: 140)
                 }
                 
@@ -141,7 +141,7 @@ public struct TelemetryHistoryCard: View {
                     
                     Spacer()
                     
-                    Text("Son \(LiveMetricsStore.chartHistoryCapacity) Örnek (Canlı Darwin API)")
+                    Text(L10n.string("Last %lld samples (Live Darwin API)", table: .dashboard, Int64(LiveMetricsStore.chartHistoryCapacity)))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -150,7 +150,7 @@ public struct TelemetryHistoryCard: View {
     }
     
     private var titleLabel: some View {
-        Label("Canlı Telemetri & Performans Grafiği", systemImage: "chart.xyaxis.line")
+        Label(L10n.string("Live Telemetry & Performance Chart", table: .dashboard), systemImage: "chart.xyaxis.line")
             .font(.system(size: 14, weight: .bold))
             .lineLimit(1)
     }
@@ -158,7 +158,7 @@ public struct TelemetryHistoryCard: View {
     private var metricPicker: some View {
         Picker("", selection: $selectedMetric) {
             ForEach(MetricType.allCases) { metric in
-                Text(metric.rawValue).tag(metric)
+                Text(l10n: metric.rawValue, table: .dashboard).tag(metric)
             }
         }
         .pickerStyle(.segmented)

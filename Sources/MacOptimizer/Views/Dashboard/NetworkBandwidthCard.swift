@@ -14,7 +14,7 @@ public struct NetworkBandwidthCard: View {
                             .font(.system(size: 16))
                             .foregroundColor(.cyan)
                         
-                        Text("Ağ Hızı & Bant Genişliği")
+                        Text(l10n: "Network Speed & Bandwidth", table: .dashboard)
                             .font(.system(size: 13, weight: .bold))
                     }
                     
@@ -35,7 +35,7 @@ public struct NetworkBandwidthCard: View {
                             .foregroundColor(.blue)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("İndirme (Download)")
+                            Text(l10n: "Download", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             
@@ -55,7 +55,7 @@ public struct NetworkBandwidthCard: View {
                             .foregroundColor(.purple)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Yükleme (Upload)")
+                            Text(l10n: "Upload", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             
@@ -72,7 +72,7 @@ public struct NetworkBandwidthCard: View {
                 // Session Counters
                 HStack {
                     HStack(spacing: 4) {
-                        Text("Toplam İndirilen:")
+                        Text(l10n: "Total Downloaded:", table: .dashboard)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                         Text(ByteFormatter.format(Int64(stats.totalDownloadBytes)))
@@ -82,7 +82,7 @@ public struct NetworkBandwidthCard: View {
                     Spacer()
                     
                     HStack(spacing: 4) {
-                        Text("Toplam Gönderilen:")
+                        Text(l10n: "Total Uploaded:", table: .dashboard)
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                         Text(ByteFormatter.format(Int64(stats.totalUploadBytes)))

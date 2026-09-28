@@ -6,4 +6,4 @@
 <key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
 <key>one</key><string>%lld anomaly awaiting review</string><key>other</key><string>%lld anomalies awaiting review</string></dict>
 </dict>
-</dict></plist>
+<key>%lld cycles</key><dict><key>NSStringLocalizedFormatKey</key><string>%#@count@</string><key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string><key>one</key><string>%lld cycle</string><key>other</key><string>%lld cycles</string></dict></dict><key>Last %lld samples (Live Darwin API)</key><dict><key>NSStringLocalizedFormatKey</key><string>%#@count@</string><key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string><key>one</key><string>Last %lld sample (Live Darwin API)</string><key>other</key><string>Last %lld samples (Live Darwin API)</string></dict></dict></dict></plist>

@@ -482,14 +482,22 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(insights.contains(where: { $0.severity == .critical }))
     }
     
-    func testOllamaAndOpenAIProvidersInstantiation() {
-        let ollama = OllamaProvider(baseURL: "http://localhost:11434", model: "llama3.2")
-        XCTAssertEqual(ollama.providerId, "ollama_local")
-        XCTAssertFalse(ollama.requiresNetwork)
-        
-        let openai = OpenAICompatibleProvider(baseURL: "https://api.openai.com", apiKey: "test-key", model: "gpt-4o")
-        XCTAssertEqual(openai.providerId, "openai_compatible")
-        XCTAssertTrue(openai.requiresNetwork)
+    func testNIMRequestPayloadDisclosureAndHistoryLimit() throws {
+        let off = NvidiaNIMProvider.cloudContext("metrics", processNames: ["SecretApp (PID: 7)"], includeProcesses: false)
+        XCTAssertFalse(off.contains("SecretApp"))
+        let on = NvidiaNIMProvider.cloudContext("metrics", processNames: ["SecretApp (PID: 7)"], includeProcesses: true)
+        XCTAssertTrue(on.contains("SecretApp"))
+
+        let messages = (0..<10).map { ["role": "user", "content": "message-\($0)" + ($0 == 9 ? " /Users/alice/Secret.txt" : "")] }
+        let body = try NvidiaNIMService.requestBody(messages: messages, config: NIMConfig(apiKey: "secret-key"))
+        let payload = String(decoding: body, as: UTF8.self)
+        XCTAssertFalse(payload.contains("secret-key"))
+        XCTAssertFalse(payload.contains("/Users/"))
+        XCTAssertTrue(payload.contains("[dosya yolu]"))
+        XCTAssertFalse(payload.contains("message-0"))
+        XCTAssertTrue(payload.contains("message-9"))
+        let decoded = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+        XCTAssertEqual((decoded?["messages"] as? [[String: String]])?.count, 7)
     }
     
     // MARK: - 11. Mach-O Architecture Detector Tests

@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// Settings and preferences view including Multi-Provider AI Platform (Local Heuristics, Ollama, NVIDIA NIM, OpenAI Compatible),
+/// Settings and preferences view including local and NVIDIA NIM AI providers,
 /// Model Scanner, Manual Entry, Autonomous Policies, and General Preferences.
 /// Fully responsive across all macOS window sizes.
 public struct SettingsView: View {
@@ -16,6 +16,9 @@ public struct SettingsView: View {
     @State private var isKeyVisible: Bool = false
     @State private var modelSelectionMode: ModelEntryMode = .picker
     @State private var modelSearchQuery: String = ""
+    @State private var showCloudDisclosure = false
+    @AppStorage("MacOptimizer_NIMDisclosureAccepted") private var cloudDisclosureAccepted = false
+    @AppStorage("MacOptimizer_IncludeRunningAppNames") private var includeRunningAppNames = false
     
     @State private var isWatchdogActive: Bool = true
     @State private var autoPurgeRAM: Bool = true
@@ -72,6 +75,18 @@ public struct SettingsView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+        .sheet(isPresented: $showCloudDisclosure) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("NVIDIA NIM veri paylaşımı").font(.headline)
+                Text("Bulut sağlayıcısı etkinleştirildiğinde NVIDIA NIM şu verileri alır: Mac donanım modeli, çip, macOS sürümü, RAM/CPU/disk yüzdeleri, gereksiz dosya boyutu ve sohbet mesajlarınız.")
+                Text("Çalışan uygulama adları varsayılan olarak gönderilmez. Açarsanız uygulama adları ve işlem kimlikleri de NVIDIA NIM'e gönderilir.")
+                HStack {
+                    Button("İptal") { selectedProvider = .localHeuristics; saveAIConfig(); showCloudDisclosure = false }
+                    Spacer()
+                    Button("Etkinleştir") { cloudDisclosureAccepted = true; saveAIConfig(); showCloudDisclosure = false }.keyboardShortcut(.defaultAction)
+                }
+            }.padding(24).frame(width: 460)
+        }
         .onAppear {
             selectedProvider = appState.nimConfig.providerType
             apiKeyInput = appState.nimConfig.apiKey
@@ -136,7 +151,8 @@ public struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(width: 280)
-                    .onChange(of: selectedProvider) { _, _ in
+                    .onChange(of: selectedProvider) { _, value in
+                        if value == .nvidiaNIM && !cloudDisclosureAccepted { showCloudDisclosure = true }
                         saveAIConfig()
                     }
                 }
@@ -145,6 +161,12 @@ public struct SettingsView: View {
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 
+                if selectedProvider == .nvidiaNIM {
+                    Text("NVIDIA NIM alır: donanım modeli, çip, macOS sürümü, RAM/CPU/disk yüzdeleri, gereksiz dosya boyutu ve sohbet mesajları.")
+                        .font(.system(size: 11)).foregroundColor(.secondary)
+                    Toggle("Çalışan uygulama adlarını dahil et", isOn: $includeRunningAppNames)
+                        .font(.system(size: 12))
+                }
                 Divider()
                 
                 // PROVIDER 1: LOCAL HEURISTICS (100% Offline)
@@ -165,52 +187,6 @@ public struct SettingsView: View {
                     .padding(12)
                     .background(Color.green.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                
-                // PROVIDER 2: LOCAL OLLAMA
-                if selectedProvider == .ollama {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "desktopcomputer")
-                                .font(.system(size: 24))
-                                .foregroundColor(.orange)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Yerel Ollama LLM Motoru (Cihaz Üzerinde)")
-                                    .font(.system(size: 13, weight: .bold))
-                                Text("Mac'inizde çalışan Ollama (`localhost:11434`) üzerinden yerel açık kaynaklı yapay zeka modelleriyle etkileşime geçin.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(10)
-                        .background(Color.orange.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Ollama Base URL:")
-                                .font(.system(size: 12, weight: .semibold))
-                            TextField("http://localhost:11434", text: $baseURLInput)
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 12, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onChange(of: baseURLInput) { _, _ in saveAIConfig() }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Ollama Model Adı (örn. llama3.2, deepseek-r1:8b, qwen2.5-coder):")
-                                .font(.system(size: 12, weight: .semibold))
-                            TextField("llama3.2", text: $selectedModel)
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 12, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onChange(of: selectedModel) { _, _ in saveAIConfig() }
-                        }
-                    }
                 }
                 
                 // PROVIDER 3: NVIDIA NIM (Enterprise Cloud)
@@ -313,7 +289,7 @@ public struct SettingsView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(.plain)
-                            .disabled(appState.isTestingNIM || apiKeyInput.isEmpty)
+                            .disabled(appState.isTestingNIM || apiKeyInput.isEmpty || !cloudDisclosureAccepted)
                             
                             if let result = appState.nimTestResult {
                                 HStack(spacing: 6) {
@@ -329,46 +305,7 @@ public struct SettingsView: View {
                     }
                 }
                 
-                // PROVIDER 4: CUSTOM OPENAI COMPATIBLE
-                if selectedProvider == .customOpenAI {
-                    VStack(alignment: .leading, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Uç Nokta URL'si (Base URL):")
-                                .font(.system(size: 12, weight: .semibold))
-                            TextField("https://api.openai.com/v1 veya http://localhost:8000/v1", text: $baseURLInput)
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 12, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onChange(of: baseURLInput) { _, _ in saveAIConfig() }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("API Anahtarı (İsteğe Bağlı):")
-                                .font(.system(size: 12, weight: .semibold))
-                            SecureField("sk-...", text: $apiKeyInput)
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 12, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onChange(of: apiKeyInput) { _, _ in saveAIConfig() }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Model Adı:")
-                                .font(.system(size: 12, weight: .semibold))
-                            TextField("gpt-4o / custom-model", text: $selectedModel)
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 12, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onChange(of: selectedModel) { _, _ in saveAIConfig() }
-                        }
-                    }
-                }
+
             }
         }
     }
@@ -474,7 +411,7 @@ public struct SettingsView: View {
         
         let finalModel = (modelSelectionMode == .manual ? manualModelInput : selectedModel).trimmingCharacters(in: .whitespacesAndNewlines)
         conf.selectedModel = finalModel.isEmpty ? "meta/llama-3.3-70b-instruct" : finalModel
-        conf.isEnabled = (selectedProvider == .nvidiaNIM || selectedProvider == .ollama || selectedProvider == .customOpenAI)
+        conf.isEnabled = (selectedProvider == .nvidiaNIM && cloudDisclosureAccepted)
         conf.isManualEntry = (modelSelectionMode == .manual)
         appState.saveNIMConfig(conf)
     }

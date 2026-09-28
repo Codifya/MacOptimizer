@@ -509,6 +509,52 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertEqual((decoded?["messages"] as? [[String: String]])?.count, 7)
     }
 
+    func testCloudSnapshotContextIsEnglishAndPrivate() {
+        var memory = MemoryStats()
+        memory.totalBytes = 16_000_000_000
+        memory.activeBytes = 8_000_000_000
+        var cpu = CPUStats()
+        cpu.totalUsage = 12.34
+        var disk = DiskStats()
+        disk.totalBytes = 500_000_000_000
+        disk.freeBytes = 250_000_000_000
+        let context = AppState.cloudSnapshotContext(hardware: HardwareInfo(), memory: memory, cpu: cpu, disk: disk)
+        XCTAssertTrue(context.hasPrefix("Mac model: "))
+        XCTAssertTrue(context.contains("macOS version: "))
+        XCTAssertTrue(context.contains("CPU: 12.3%"))
+        XCTAssertTrue(context.contains("Free disk: 50%"))
+        for turkish in ["Mac Modeli", "Sürümü", "Boş Disk"] { XCTAssertFalse(context.contains(turkish)) }
+        XCTAssertFalse(context.contains("/Users/"))
+        XCTAssertFalse(context.contains("Running apps"))
+        XCTAssertFalse(context.contains("PID"))
+    }
+
+    func testRunawayMessageShowsPercentOnceInBothLanguages() async {
+        let prior = UserDefaults.standard.object(forKey: "AppleLanguages")
+        defer {
+            if let prior { UserDefaults.standard.set(prior, forKey: "AppleLanguages") }
+            else { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        }
+        var config = AutonomousConfig()
+        config.isWatchdogActive = true
+        config.cpuRunawayThresholdPercent = 80
+        let hot = ProcessInfoModel(pid: 4244, name: "HotApp", path: "/Applications/HotApp.app/Contents/MacOS/HotApp", cpuPercentage: 97.34)
+        var mem = MemoryStats()
+        mem.totalBytes = 16_000_000_000
+
+        for (language, expected) in [("en", "97.3% CPU"), ("tr", "%97.3 işlemci")] {
+            UserDefaults.standard.set([language], forKey: "AppleLanguages")
+            let guardService = AutonomousGuardService()
+            var alerts: [AutonomousAlert] = []
+            for _ in 0..<3 {
+                alerts += await guardService.evaluateCycle(memory: mem, cpu: CPUStats(), disk: DiskStats(), processes: [hot], config: config)
+            }
+            let message = alerts.first { $0.type == .runawayProcess }?.message ?? ""
+            XCTAssertEqual(message.filter { $0 == "%" }.count, 1, "\(language): \(message)")
+            XCTAssertTrue(message.contains(expected), "\(language): \(message)")
+        }
+    }
+
     func testNIMPromptsAreEnglishAndNameReplyLanguage() {
         let system = NvidiaNIMProvider.copilotSystemPrompt(snapshotContext: "RAM 50%", replyLanguage: "Turkish")
         XCTAssertTrue(system.hasPrefix("You are the MacOptimizer Pro macOS assistant."))
@@ -665,11 +711,13 @@ final class MacOptimizerTests: XCTestCase {
         )
         
         XCTAssertFalse(alerts.isEmpty, "Watchdog should generate alerts for critical metrics")
-        let titles = alerts.map { $0.title }
-        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") || $0.contains("Memory") }))
-        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") || $0.contains("Thermal") }))
-        XCTAssertTrue(titles.contains(where: { $0.contains("Swap") }))
-        XCTAssertTrue(titles.contains(where: { $0.contains("Disk") }))
+        // Titles follow the UI language, so compare against the localized value rather than literal text.
+        let titles = Set(alerts.map { $0.title })
+        XCTAssertTrue(titles.contains(L10n.string("High Memory Pressure Warning", table: .services)))
+        XCTAssertTrue(titles.contains(L10n.string("Thermal Throttling / Temperature Warning", table: .services)))
+        XCTAssertTrue(titles.contains(L10n.string("High Swap Usage", table: .services)))
+        XCTAssertTrue(titles.contains(L10n.string("Low Disk Space Warning", table: .services)))
+        XCTAssertTrue(alerts.contains { $0.type == .lowDisk })
     }
     
     func testAutonomousGuardSkipsProtectedSystemProcesses() async {

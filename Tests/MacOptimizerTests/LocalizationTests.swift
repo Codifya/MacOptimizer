@@ -85,9 +85,10 @@ final class LocalizationTests: XCTestCase {
     }
 
     private func formatSpecifiers(in value: String) -> [String] {
-        let pattern = #"%(?:[0-9]+\$)?[-+#0 ]*(?:[0-9]+|\*)?(?:\.(?:[0-9]+|\*))?(?:hh|h|ll|l|L|z|t|j)?[@diuoxXfFeEgGaAcCsSp]"#
+        // "%%" is a literal percent sign, not a specifier; match it first so "%@%% CPU" is not read as "% C".
+        let pattern = #"%%|%(?:[0-9]+\$)?[-+#0 ]*(?:[0-9]+|\*)?(?:\.(?:[0-9]+|\*))?(?:hh|h|ll|l|L|z|t|j)?[@diuoxXfFeEgGaAcCsSp]"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         let range = NSRange(value.startIndex..., in: value)
-        return regex.matches(in: value, range: range).compactMap { Range($0.range, in: value).map { String(value[$0]) } }.sorted()
+        return regex.matches(in: value, range: range).compactMap { Range($0.range, in: value).map { String(value[$0]) } }.filter { $0 != "%%" }.sorted()
     }
 }

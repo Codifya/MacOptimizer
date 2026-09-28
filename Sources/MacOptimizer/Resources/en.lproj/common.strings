@@ -38,3 +38,14 @@
 "Cleaned %@ of junk files successfully." = "Cleaned %@ of junk files successfully.";
 "%@ and all its leftovers (%@) were removed successfully." = "%@ and all its leftovers (%@) were removed successfully.";
 "Moved %lld duplicate files to Trash (%@ freed)." = "Moved %lld duplicate files to Trash (%@ freed).";
+"Scan cancelled." = "Scan cancelled.";
+"Scan complete." = "Scan complete.";
+"Cleaning %@…" = "Cleaning %@…";
+"Junk File Cleanup (Dry-Run Approved)" = "Junk File Cleanup (Dry-Run Approved)";
+"No errors occurred." = "No errors occurred.";
+"Scanning apps…" = "Scanning apps…";
+"Checking for updates…" = "Checking for updates…";
+"All apps are up to date." = "All apps are up to date.";
+"%@ Uninstalled" = "%@ Uninstalled";
+"Scanning for duplicate files…" = "Scanning for duplicate files…";
+"No duplicate files found." = "No duplicate files found.";

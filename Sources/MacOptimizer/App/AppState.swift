@@ -348,11 +348,7 @@ public final class AppState: ObservableObject {
         chatMessages.appendBounded(userMsg, limit: Self.maxChatMessages)
         isChatThinking = true
         
-        let baseContext = """
-        Mac Modeli: \(hardwareInfo.modelName) (\(hardwareInfo.chipName)), macOS Sürümü: \(hardwareInfo.osVersion)
-        RAM: %\(Int(memoryStats.usedPercentage * 100))
-        CPU: %\(String(format: "%.1f", cpuStats.totalUsage)), Boş Disk: %\(Int(diskStats.freePercentage * 100))
-        """
+        let baseContext = Self.cloudSnapshotContext(hardware: hardwareInfo, memory: memoryStats, cpu: cpuStats, disk: diskStats)
         let context = NvidiaNIMProvider.cloudContext(
             baseContext,
             processNames: runningProcesses.prefix(4).map { "\($0.name) (PID: \($0.pid))" },
@@ -377,6 +373,17 @@ public final class AppState: ObservableObject {
                 self.chatMessages.appendBounded(assistantMsg, limit: Self.maxChatMessages)
             }
         }
+    }
+    
+    /// System summary sent to the cloud model. Always English (model input, like the prompts); the model
+    /// is told separately which language to reply in. Contains no app names, file paths or secrets —
+    /// app names are only added by `NvidiaNIMProvider.cloudContext` when the user opted in.
+    nonisolated static func cloudSnapshotContext(hardware: HardwareInfo, memory: MemoryStats, cpu: CPUStats, disk: DiskStats) -> String {
+        """
+        Mac model: \(hardware.modelName) (\(hardware.chipName)), macOS version: \(hardware.osVersion)
+        RAM: \(Int(memory.usedPercentage * 100))%
+        CPU: \(String(format: "%.1f", cpu.totalUsage))%, Free disk: \(Int(disk.freePercentage * 100))%
+        """
     }
     
     public func executeAIAction(_ action: AIAction) {
@@ -531,10 +538,10 @@ public final class AppState: ObservableObject {
             guard let self else { return }
             self.isScanningJunk = false
             if Task.isCancelled {
-                self.junkStatusMessage = "Tarama iptal edildi."
+                self.junkStatusMessage = L10n.string("Scan cancelled.")
             } else {
                 self.junkGroups = groups
-                self.junkStatusMessage = "Tarama tamamlandı."
+                self.junkStatusMessage = L10n.string("Scan complete.")
             }
         }
     }
@@ -562,7 +569,7 @@ public final class AppState: ObservableObject {
         Task {
             let confirmation = SafeOperationExecutor.confirm(plan)
             let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation, progressHandler: self.throttledProgress { state, name, progress in
-                state.junkStatusMessage = "\(name) temizleniyor..."
+                state.junkStatusMessage = L10n.string("Cleaning %@…", name)
                 state.junkScanProgress = progress
             })
             
@@ -572,12 +579,12 @@ public final class AppState: ObservableObject {
                 self.scanJunk()
                 
                 let report = OptimizationReport(
-                    title: "Gereksiz Dosya Temizliği (Dry-Run Onaylı)",
+                    title: L10n.string("Junk File Cleanup (Dry-Run Approved)"),
                     freedMemoryBytes: 0,
                     freedDiskBytes: result.totalFreedBytes,
                     details: [
-                        "\(result.cleanedItemCount) öğe başarıyla temizlendi.",
-                        result.failedItemCount > 0 ? "\(result.failedItemCount) öğe atlandı." : "Hata oluşmadı."
+                        L10n.string("%lld items cleaned successfully.", result.cleanedItemCount),
+                        result.failedItemCount > 0 ? L10n.string("%lld items skipped.", result.failedItemCount) : L10n.string("No errors occurred.")
                     ],
                     durationSeconds: result.durationSeconds
                 )
@@ -613,7 +620,7 @@ public final class AppState: ObservableObject {
         guard !isScanningApps else { return }
         isScanningApps = true
         appScanProgress = 0.0
-        appStatusMessage = "Uygulamalar taranıyor..."
+        appStatusMessage = L10n.string("Scanning apps…")
         
         let progress = throttledProgress { state, name, progress in
             state.appStatusMessage = name
@@ -624,10 +631,10 @@ public final class AppState: ObservableObject {
             guard let self else { return }
             self.isScanningApps = false
             if Task.isCancelled {
-                self.appStatusMessage = "Tarama iptal edildi."
+                self.appStatusMessage = L10n.string("Scan cancelled.")
             } else {
                 self.installedApps = apps
-                self.appStatusMessage = "\(apps.count) uygulama bulundu."
+                self.appStatusMessage = L10n.string("%lld apps found.", apps.count)
             }
         }
     }
@@ -635,7 +642,7 @@ public final class AppState: ObservableObject {
     public func checkAllAppUpdates() {
         guard !isCheckingUpdates else { return }
         isCheckingUpdates = true
-        appStatusMessage = "Güncellemeler kontrol ediliyor..."
+        appStatusMessage = L10n.string("Checking for updates…")
         
         Task {
             // Wait for an in-flight app scan so updates are checked against the complete list.
@@ -649,7 +656,7 @@ public final class AppState: ObservableObject {
                 self.installedApps = updated
                 self.isCheckingUpdates = false
                 let updatesFound = updated.filter { $0.updateInfo.hasUpdate }.count
-                self.appStatusMessage = updatesFound > 0 ? "\(updatesFound) güncelleme mevcut!" : "Tüm uygulamalar güncel."
+                self.appStatusMessage = updatesFound > 0 ? L10n.string("%lld updates available!", updatesFound) : L10n.string("All apps are up to date.")
                 self.showNotification(message: self.appStatusMessage)
             }
         }
@@ -682,10 +689,10 @@ public final class AppState: ObservableObject {
                 self.refreshMetrics()
                 
                 let report = OptimizationReport(
-                    title: "\(app.name) Kaldırıldı",
+                    title: L10n.string("%@ Uninstalled", app.name),
                     freedMemoryBytes: 0,
                     freedDiskBytes: result.freedBytes,
-                    details: ["\(result.deletedCount) ilişkili dosya silindi."],
+                    details: [L10n.string("%lld associated files deleted.", result.deletedCount)],
                     durationSeconds: 0.0
                 )
                 self.addReport(report)
@@ -809,7 +816,7 @@ public final class AppState: ObservableObject {
         guard !isScanningDuplicates else { return }
         isScanningDuplicates = true
         duplicateScanProgress = 0.0
-        duplicateStatusMessage = "Yinelenen dosyalar taranıyor..."
+        duplicateStatusMessage = L10n.string("Scanning for duplicate files…")
         
         let progress = throttledProgress { state, msg, progress in
             state.duplicateStatusMessage = msg
@@ -820,12 +827,12 @@ public final class AppState: ObservableObject {
             guard let self else { return }
             self.isScanningDuplicates = false
             if Task.isCancelled {
-                self.duplicateStatusMessage = "Tarama iptal edildi."
+                self.duplicateStatusMessage = L10n.string("Scan cancelled.")
                 return
             }
             self.duplicateGroups = groups
             self.duplicateScanProgress = 1.0
-            self.duplicateStatusMessage = groups.isEmpty ? "Yinelenen dosya bulunamadı." : "\(groups.count) yinelenen dosya grubu bulundu."
+            self.duplicateStatusMessage = groups.isEmpty ? L10n.string("No duplicate files found.") : L10n.string("%lld duplicate file groups found.", groups.count)
         }
     }
     

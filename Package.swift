@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "MacOptimizer",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -14,7 +15,8 @@ let package = Package(
         .executableTarget(
             name: "MacOptimizer",
             dependencies: [],
-            path: "Sources/MacOptimizer"
+            path: "Sources/MacOptimizer",
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "MacOptimizerTests",

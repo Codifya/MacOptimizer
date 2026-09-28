@@ -23,19 +23,19 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     
     public var title: String {
         switch self {
-        case .dashboard: return "Genel Bakış"
-        case .aiCopilot: return "AI Asistan & Danışman"
-        case .autonomousGuard: return "Otonom Koruma"
-        case .memory: return "RAM & Bellek"
-        case .junkCleaner: return "Gereksiz Dosyalar"
-        case .duplicateFinder: return "Yinelenen Dosyalar"
-        case .appManager: return "Uygulama Yöneticisi"
-        case .appUpdates: return "Güncellemeler"
-        case .startupManager: return "Başlangıç Öğeleri"
-        case .maintenance: return "Sistem Bakımı"
-        case .security: return "Güvenlik & Gizlilik"
-        case .history: return "Raporlar & Geçmiş"
-        case .settings: return "Ayarlar & Yapay Zeka Hub'ı"
+        case .dashboard: return L10n.string("Dashboard")
+        case .aiCopilot: return L10n.string("AI Assistant & Advisor")
+        case .autonomousGuard: return L10n.string("Autonomous Protection")
+        case .memory: return L10n.string("RAM & Memory")
+        case .junkCleaner: return L10n.string("Junk Cleaner")
+        case .duplicateFinder: return L10n.string("Duplicate Files")
+        case .appManager: return L10n.string("App Manager")
+        case .appUpdates: return L10n.string("Updates")
+        case .startupManager: return L10n.string("Startup Items")
+        case .maintenance: return L10n.string("System Maintenance")
+        case .security: return L10n.string("Security & Privacy")
+        case .history: return L10n.string("Reports & History")
+        case .settings: return L10n.string("Settings & AI Hub")
         }
     }
     
@@ -179,10 +179,10 @@ public final class AppState: ObservableObject {
         if chatMessages.isEmpty {
             chatMessages.append(AIChatMessage(
                 role: .assistant,
-                content: "Merhaba! Ben MacOptimizer Yapay Zeka Asistanınız. Sisteminizin durumunu analiz edebilir, gereksiz dosyaları temizleyebilir ve uygulama güncellemelerinizi denetleyebilirim. Size nasıl yardımcı olabilirim?",
+                content: L10n.string("Hello! I’m your MacOptimizer AI assistant. I can analyze your system, clean junk files, and check for app updates. How can I help?"),
                 actions: [
-                    AIAction(title: "Sistem Durumunu Analiz Et", type: .analyzeSystem),
-                    AIAction(title: "Gereksiz Dosyaları Tara", type: .scanJunk)
+                    AIAction(title: L10n.string("Analyze System Status"), type: .analyzeSystem),
+                    AIAction(title: L10n.string("Scan for Junk Files"), type: .scanJunk)
                 ]
             ))
         }
@@ -442,12 +442,12 @@ public final class AppState: ObservableObject {
                     var updatedConfig = self.nimConfig
                     updatedConfig.cachedModels = models
                     self.saveNIMConfig(updatedConfig)
-                    self.showNotification(message: "NVIDIA NIM üzerinden \(models.count) adet model başarıyla tarandı ve listelendi!")
+                    self.showNotification(message: L10n.string("Found and listed %lld models from NVIDIA NIM.", models.count))
                 }
             } catch {
                 await MainActor.run {
                     self.isScanningNIMModels = false
-                    self.showNotification(message: "Model tarama hatası: \(error.localizedDescription)")
+                    self.showNotification(message: L10n.string("Model scan failed: %@", error.localizedDescription))
                 }
             }
         }
@@ -476,7 +476,7 @@ public final class AppState: ObservableObject {
             let procPath = proc?.path ?? ""
             
             guard SafetyGuard.isProcessKillable(pid: pid, name: procName, path: procPath) else {
-                self.showNotification(message: "Güvenlik Engeli: '\(procName)' bir macOS sistem bileşenidir ve sonlandırılamaz.")
+                self.showNotification(message: L10n.string("Security blocked the action: %@ is a macOS system component and cannot be terminated.", procName))
                 return
             }
             
@@ -484,9 +484,9 @@ public final class AppState: ObservableObject {
             if success {
                 self.metrics.removeProcess(pid: pid)
                 self.refreshMetrics(fullProcessRefresh: true)
-                self.showNotification(message: "\(procName) süreci başarıyla sonlandırıldı.")
+                self.showNotification(message: L10n.string("Process %@ was terminated successfully.", procName))
             } else {
-                self.showNotification(message: "\(procName) süreci sonlandırılamadı.")
+                self.showNotification(message: L10n.string("Process %@ could not be terminated.", procName))
             }
         }
     }
@@ -496,7 +496,7 @@ public final class AppState: ObservableObject {
         guard !isOptimizingSmart else { return }
         isOptimizingSmart = true
         smartOptProgress = 0.0
-        smartOptStatus = "Başlatılıyor..."
+        smartOptStatus = L10n.string("Starting…")
         Task {
             let groups = await withTaskGroup(of: [JunkFileItem].self) { group in
                 for category: JunkCategoryType in [.systemCache, .systemLogs, .browserCache] {
@@ -520,7 +520,7 @@ public final class AppState: ObservableObject {
         guard !isScanningJunk else { return }
         isScanningJunk = true
         junkScanProgress = 0.0
-        junkStatusMessage = "Taranıyor..."
+        junkStatusMessage = L10n.string("Scanning…")
         
         let progress = throttledProgress { state, name, progress in
             state.junkStatusMessage = name
@@ -582,7 +582,7 @@ public final class AppState: ObservableObject {
                     durationSeconds: result.durationSeconds
                 )
                 self.addReport(report)
-                self.showNotification(message: "\(ByteFormatter.format(result.totalFreedBytes)) gereksiz dosya başarıyla temizlendi.")
+                self.showNotification(message: L10n.string("Cleaned %@ of junk files successfully.", ByteFormatter.format(result.totalFreedBytes)))
             }
         }
     }
@@ -689,7 +689,7 @@ public final class AppState: ObservableObject {
                     durationSeconds: 0.0
                 )
                 self.addReport(report)
-                self.showNotification(message: "\(app.name) ve tüm kalıntıları (\(ByteFormatter.format(result.freedBytes))) başarıyla kaldırıldı.")
+                self.showNotification(message: L10n.string("%@ and all its leftovers (%@) were removed successfully.", app.name, ByteFormatter.format(result.freedBytes)))
             }
         }
     }
@@ -842,7 +842,7 @@ public final class AppState: ObservableObject {
             let result = await DuplicateFileFinderService.shared.cleanDuplicates(self.duplicateGroups, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
             await MainActor.run {
                 self.isCleaningDuplicates = false
-                self.showNotification(message: "\(result.deletedCount) yinelenen dosya Çöp Sepetine taşındı (\(ByteFormatter.format(result.freedBytes)) alan kazanıldı).")
+                self.showNotification(message: L10n.string("Moved %lld duplicate files to Trash (%@ freed).", result.deletedCount, ByteFormatter.format(result.freedBytes)))
                 self.scanDuplicates()
             }
         }

@@ -695,9 +695,18 @@ final class MacOptimizerTests: XCTestCase {
     func testCLICommandRunnerPSNFiltering() {
         XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer"]))
         XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-psn_0_123456"]))
+        XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-AppleLanguages", "(tr)"]))
+        XCTAssertFalse(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "-NSDocumentRevisionsDebugMode", "YES"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "status"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "clean", "--dry-run"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "version"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "help"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "--version"]))
+        XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "unknown"]))
+    }
+
+    func testCLIHelpIsEnglishOnly() {
+        XCTAssertFalse(CLICommandRunner.helpText.contains { "çğıİöşüÇĞÖŞÜ".contains($0) })
     }
 
     func testBatteryHealthUsesAppleSiliconCapacityAndIntelCapacityShapes() {

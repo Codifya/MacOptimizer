@@ -19,8 +19,8 @@ public struct MaintenanceView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 16)], spacing: 16) {
                     // 1. DNS & Network Resolver
                     MaintenanceToolCard(
-                        title: "DNS & Ağ Çözümleyiciyi Sıfırla",
-                        description: "Ağ ve DNS çözümleme gecikmelerini giderir, web sitelerinin en güncel IP adresleriyle yüklenmesini sağlar.",
+                        title: L10n.string("Reset DNS & Network Resolver", table: .cleanup),
+                        description: L10n.string("Fixes network and DNS resolution delays so websites load with their most up-to-date IP addresses.", table: .cleanup),
                         icon: "network",
                         color: .blue,
                         isLoading: runningTaskName == "dns"
@@ -33,8 +33,8 @@ public struct MaintenanceView: View {
                     
                     // 2. LaunchServices Rebuild
                     MaintenanceToolCard(
-                        title: "LaunchServices Veri Tabanını Onar",
-                        description: "Birlikte Aç (Open With) menüsündeki yinelenen veya bozuk uygulama simgelerini ve dosya ilişkilerini onarır.",
+                        title: L10n.string("Repair LaunchServices Database", table: .cleanup),
+                        description: L10n.string("Repairs duplicated or broken app icons and file associations in the Open With menu.", table: .cleanup),
                         icon: "app.badge.checkmark",
                         color: .indigo,
                         isLoading: runningTaskName == "launchservices"
@@ -47,8 +47,8 @@ public struct MaintenanceView: View {
                     
                     // 3. QuickLook Cache Reset
                     MaintenanceToolCard(
-                        title: "QuickLook Önbelleğini Sıfırla",
-                        description: "Finder dosya önizlemelerinde (Space tuşu) oluşan donma veya hatalı küçük resim önbelleklerini onarır.",
+                        title: L10n.string("Reset QuickLook Cache", table: .cleanup),
+                        description: L10n.string("Repairs the frozen or incorrect thumbnail caches created in Finder file previews (Space bar).", table: .cleanup),
                         icon: "eye.fill",
                         color: .purple,
                         isLoading: runningTaskName == "quicklook"
@@ -61,8 +61,8 @@ public struct MaintenanceView: View {
                     
                     // 4. CoreAudio Restart
                     MaintenanceToolCard(
-                        title: "CoreAudio Ses Sistemini Yenile",
-                        description: "Kilitlenmiş mikrofon/kulaklık bağlantılarını, ses cızırtılarını ve yanıt vermeyen ses aygıtlarını sıfırlar.",
+                        title: L10n.string("Refresh CoreAudio System", table: .cleanup),
+                        description: L10n.string("Resets stuck microphone and headphone connections, audio crackling, and unresponsive audio devices.", table: .cleanup),
                         icon: "speaker.wave.2.fill",
                         color: .orange,
                         isLoading: runningTaskName == "audio"
@@ -75,8 +75,8 @@ public struct MaintenanceView: View {
                     
                     // 5. Spotlight Rebuild
                     MaintenanceToolCard(
-                        title: "Spotlight İndeksini Yenile",
-                        description: "Dosya arama sistemini sıfırlayarak Spotlight indeksini baştan optimize eder.",
+                        title: L10n.string("Refresh Spotlight Index", table: .cleanup),
+                        description: L10n.string("Resets the file search system to optimize the Spotlight index from scratch.", table: .cleanup),
                         icon: "magnifyingglass",
                         color: .yellow,
                         isLoading: runningTaskName == "spotlight"
@@ -89,8 +89,8 @@ public struct MaintenanceView: View {
                     
                     // 7. Clipboard Clear
                     MaintenanceToolCard(
-                        title: "Pano Geçmişini Temizle",
-                        description: "Kopyalanmış hassas metin, şifre ve görselleri sistem panosundan (Clipboard) kalıcı olarak siler.",
+                        title: L10n.string("Clear Clipboard History", table: .cleanup),
+                        description: L10n.string("Permanently erases copied sensitive text, passwords, and images from the system clipboard.", table: .cleanup),
                         icon: "doc.on.clipboard.fill",
                         color: .teal,
                         isLoading: runningTaskName == "clipboard"
@@ -101,8 +101,8 @@ public struct MaintenanceView: View {
                     
                     // 8. Empty Trash
                     MaintenanceToolCard(
-                        title: "Çöp Kutusunu Boşalt",
-                        description: "Kullanıcı çöp sepetinde biriken tüm dosyaları güvenli ve kalıcı şekilde siler.",
+                        title: L10n.string("Empty Trash", table: .cleanup),
+                        description: L10n.string("Safely and permanently deletes every file accumulated in the user trash bin.", table: .cleanup),
                         icon: "trash.fill",
                         color: .red,
                         isLoading: runningTaskName == "trash"
@@ -120,15 +120,15 @@ public struct MaintenanceView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-        .alert("Çöp Kutusu kalıcı olarak boşaltılsın mı?", isPresented: $trashConfirmation) {
-            Button("Vazgeç", role: .cancel) {}
-            Button("Kalıcı Olarak Sil", role: .destructive) {
+        .alert(L10n.string("Empty the trash bin permanently?", table: .cleanup), isPresented: $trashConfirmation) {
+            Button(L10n.string("Cancel", table: .cleanup), role: .cancel) {}
+            Button(L10n.string("Delete Permanently", table: .cleanup), role: .destructive) {
                 let result = SafeOperationExecutor.emptyTrash(pendingTrash, confirmation: SafeOperationExecutor.confirm(CleaningPlan()))
                 appState.refreshMetrics()
-                appState.showNotification(message: "Silinen: \(result.removedCount), atlanan: \(result.skippedCount), boşalan: \(ByteFormatter.format(result.bytesFreed)).")
+                appState.showNotification(message: L10n.string("Removed: %lld, skipped: %lld, freed: %@.", table: .cleanup, Int64(result.removedCount), Int64(result.skippedCount), ByteFormatter.format(result.bytesFreed)))
             }
         } message: {
-            Text("\(pendingTrash.count) öğe, toplam \(ByteFormatter.format(pendingTrashBytes)). Bu işlem geri alınamaz.")
+            Text(L10n.string("%lld items, %@ in total. This action cannot be undone.", table: .cleanup, Int64(pendingTrash.count), ByteFormatter.format(pendingTrashBytes)))
         }
     }
     
@@ -146,11 +146,11 @@ public struct MaintenanceView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Sistem Bakımı & Onarım")
+                    Text(l10n: "System Maintenance & Repair", table: .cleanup)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
-                    
-                    Text("Sık karşılaşılan macOS performans tıkanıklıklarını, DNS gecikmelerini, ses kilitlenmelerini ve önbellek hatalarını tek tıkla çözün.")
+
+                    Text(l10n: "Fix common macOS performance bottlenecks, DNS delays, audio locks, and cache errors in one click.", table: .cleanup)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -214,7 +214,7 @@ private struct MaintenanceToolCard: View {
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 10))
                             }
-                            Text(isLoading ? "Çalıştırılıyor..." : "Çalıştır")
+                            Text(l10n: isLoading ? "Running..." : "Run", table: .cleanup)
                         }
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(color)

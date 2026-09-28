@@ -66,7 +66,7 @@ public struct DashboardView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .help("Metrikleri ve AI Teşhisini Yenile")
+            .help(L10n.string("Refresh metrics and AI diagnostics", table: .dashboard))
         }
     }
     
@@ -82,7 +82,7 @@ public struct DashboardView: View {
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Text("AI Sistem Sağlığı")
+                            Text(l10n: "AI system health", table: .dashboard)
                                 .font(.system(size: 13, weight: .bold))
                             
                             if let firstInsight = appState.aiInsights.first {
@@ -96,7 +96,7 @@ public struct DashboardView: View {
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                         } else {
-                            Text("Analiz bekleniyor...")
+                            Text(l10n: "Waiting for analysis...", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -104,7 +104,7 @@ public struct DashboardView: View {
                     
                     Spacer()
                     
-                    Button("İncele →") {
+                    Button(L10n.string("Review →", table: .dashboard)) {
                         appState.selectedTab = .aiCopilot
                     }
                     .buttonStyle(.plain)
@@ -122,22 +122,22 @@ public struct DashboardView: View {
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Text("Otonom Koruma")
+                            Text(l10n: "Autonomous protection", table: .dashboard)
                                 .font(.system(size: 13, weight: .bold))
                             
                             MetricBadge(
-                                text: appState.autonomousConfig.isWatchdogActive ? "Aktif" : "Kapalı",
+                                text: L10n.string(appState.autonomousConfig.isWatchdogActive ? "Active" : "Off", table: .dashboard),
                                 colorName: appState.autonomousConfig.isWatchdogActive ? "green" : "gray"
                             )
                         }
                         
                         if appState.unresolvedAlertsCount > 0 {
-                            Text("\(appState.unresolvedAlertsCount) anomali incelenmeyi bekliyor")
+                            Text(L10n.string("%lld anomalies awaiting review", table: .dashboard, appState.unresolvedAlertsCount))
                                 .font(.system(size: 11))
                                 .foregroundColor(.orange)
                                 .lineLimit(1)
                         } else {
-                            Text("Sistem 7/24 arka planda izleniyor")
+                            Text(l10n: "System monitored in the background 24/7", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -146,7 +146,7 @@ public struct DashboardView: View {
                     
                     Spacer()
                     
-                    Button("Günlük →") {
+                    Button(L10n.string("Activity log →", table: .dashboard)) {
                         appState.selectedTab = .autonomousGuard
                     }
                     .buttonStyle(.plain)
@@ -172,10 +172,10 @@ public struct DashboardView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Mac'inizi Tek Tıkla Optimize Edin")
+                    Text(l10n: "Optimize your Mac in one click", table: .dashboard)
                         .font(.system(size: 15, weight: .bold))
                     
-                    Text("Sistem ve tarayıcı önbelleklerini temizler, ağ bağlantılarını yeniler.")
+                    Text(l10n: "Clears system and browser caches and refreshes network connections.", table: .dashboard)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -195,7 +195,7 @@ public struct DashboardView: View {
                 Spacer(minLength: 12)
                 
                 ActionButton(
-                    title: appState.isOptimizingSmart ? "Optimize Ediliyor..." : "Akıllı İyileştir",
+                    title: L10n.string(appState.isOptimizingSmart ? "Optimizing..." : "Optimize smartly", table: .dashboard),
                     iconName: "bolt.fill",
                     gradient: SystemTheme.primaryGradient,
                     isLoading: appState.isOptimizingSmart
@@ -227,13 +227,13 @@ public struct DashboardView: View {
     private var quickUtilitiesCard: some View {
         GlassCard(cornerRadius: 16, padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Hızlı İşlemler", systemImage: "sparkles")
+                Label(L10n.string("Quick actions", table: .dashboard), systemImage: "sparkles")
                     .font(.system(size: 14, weight: .bold))
                 
                 VStack(spacing: 8) {
                     QuickActionButton(
-                        title: "Gereksiz Dosyaları Tara",
-                        subtitle: "Önbellek, log ve kalıntıları tespit et",
+                        title: L10n.string("Scan for junk files", table: .dashboard),
+                        subtitle: L10n.string("Find caches, logs, and leftovers", table: .dashboard),
                         icon: "trash.fill",
                         color: .purple
                     ) {
@@ -242,8 +242,8 @@ public struct DashboardView: View {
                     }
                     
                     QuickActionButton(
-                        title: "Uygulama Güncellemelerini Denetle",
-                        subtitle: "Tüm yüklü uygulamaları tara",
+                        title: L10n.string("Check app updates", table: .dashboard),
+                        subtitle: L10n.string("Scan all installed apps", table: .dashboard),
                         icon: "arrow.triangle.2.circlepath",
                         color: .orange
                     ) {
@@ -253,8 +253,8 @@ public struct DashboardView: View {
                     }
                     
                     QuickActionButton(
-                        title: "DNS Önbelleğini Temizle",
-                        subtitle: "Ağ yanıt gecikmelerini sıfırla",
+                        title: L10n.string("Flush DNS cache", table: .dashboard),
+                        subtitle: L10n.string("Reset network response delays", table: .dashboard),
                         icon: "network",
                         color: .blue
                     ) {
@@ -337,7 +337,7 @@ private struct DashboardHardwareHeader: View {
                 modelTitle
             }
             
-            Text("\(metrics.hardwareInfo.osVersion) • Çalışma Süresi: \(metrics.hardwareInfo.uptimeString)")
+            Text(L10n.string("%@ • Uptime: %@", table: .dashboard, metrics.hardwareInfo.osVersion, metrics.hardwareInfo.uptimeString))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
@@ -365,9 +365,9 @@ private struct DashboardGaugesGrid: View {
             GlassCard(cornerRadius: 16, padding: 14) {
                 CircularGaugeView(
                     percentage: metrics.memoryStats.usedPercentage,
-                    title: "RAM Bellek",
+                    title: L10n.string("Memory (RAM)", table: .dashboard),
                     valueText: String(format: "%.0f%%", metrics.memoryStats.usedPercentage * 100),
-                    subText: metrics.memoryStats.swapUsedBytes > 0 ? "Swap: \(ByteFormatter.formatMemory(metrics.memoryStats.swapUsedBytes))" : "\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(metrics.memoryStats.totalBytes))",
+                    subText: metrics.memoryStats.swapUsedBytes > 0 ? L10n.string("Swap: %@", table: .dashboard, ByteFormatter.formatMemory(metrics.memoryStats.swapUsedBytes)) : "\(ByteFormatter.formatMemory(metrics.memoryStats.actualUsedBytes)) / \(ByteFormatter.formatMemory(metrics.memoryStats.totalBytes))",
                     gradient: SystemTheme.memoryGradient,
                     size: 115
                 )
@@ -378,9 +378,9 @@ private struct DashboardGaugesGrid: View {
             GlassCard(cornerRadius: 16, padding: 14) {
                 CircularGaugeView(
                     percentage: metrics.cpuStats.totalUsage / 100.0,
-                    title: "İşlemci (CPU)",
+                    title: L10n.string("Processor (CPU)", table: .dashboard),
                     valueText: String(format: "%.1f%%", metrics.cpuStats.totalUsage),
-                    subText: "\(metrics.cpuStats.physicalCores) Çekirdek • \(metrics.cpuStats.thermalState.rawValue)",
+                    subText: L10n.string("%lld cores • %@", table: .dashboard, metrics.cpuStats.physicalCores, metrics.cpuStats.thermalState.rawValue),
                     gradient: SystemTheme.primaryGradient,
                     size: 115
                 )
@@ -391,9 +391,9 @@ private struct DashboardGaugesGrid: View {
             GlassCard(cornerRadius: 16, padding: 14) {
                 CircularGaugeView(
                     percentage: metrics.diskStats.usedPercentage,
-                    title: "Disk Depolama",
+                    title: L10n.string("Disk storage", table: .dashboard),
                     valueText: String(format: "%.0f%%", metrics.diskStats.usedPercentage * 100),
-                    subText: "\(ByteFormatter.format(metrics.diskStats.freeBytes)) Boş",
+                    subText: L10n.string("%@ free", table: .dashboard, ByteFormatter.format(metrics.diskStats.freeBytes)),
                     gradient: SystemTheme.junkGradient,
                     size: 115
                 )
@@ -405,7 +405,7 @@ private struct DashboardGaugesGrid: View {
                 GlassCard(cornerRadius: 16, padding: 14) {
                     CircularGaugeView(
                         percentage: Double(metrics.batteryStats.percentage) / 100.0,
-                        title: "Pil Durumu",
+                        title: L10n.string("Battery status", table: .dashboard),
                         valueText: "\(metrics.batteryStats.percentage)%",
                         subText: metrics.batteryStats.powerSource,
                         gradient: SystemTheme.updateGradient,

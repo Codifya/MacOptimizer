@@ -9,12 +9,11 @@ public struct CLICommandRunner {
     
     public static func shouldHandleCLI(arguments: [String] = CommandLine.arguments) -> Bool {
         guard arguments.count > 1 else { return false }
-        let firstArg = arguments[1]
-        // Filter out macOS Finder Process Serial Number arguments and test runners
-        if firstArg.starts(with: "-psn") || firstArg.contains("xctest") || firstArg.hasSuffix(".xctest") {
-            return false
+        let firstArg = arguments[1].lowercased()
+        if ["status", "clean", "version", "help", "-v", "--version", "-h", "--help"].contains(firstArg) {
+            return true
         }
-        return true
+        return !firstArg.hasPrefix("-") && !firstArg.contains("xctest") && !firstArg.hasSuffix(".xctest")
     }
     
     public static func runCLI() async {
@@ -127,14 +126,17 @@ public struct CLICommandRunner {
     }
     
     private static func printHelp() {
-        print("""
+        print(helpText)
+    }
+
+    static let helpText = """
         MacOptimizer Pro CLI Help & Usage:
         CLI output is English only and does not use localization catalogs.
         
-        Kullanım:
-          MacOptimizer <komut> [seçenekler]
+        Usage:
+          MacOptimizer <command> [options]
         
-        Komutlar:
+        Commands:
           status           Print current CPU, memory, thermal, swap, and disk telemetry.
           clean            Scan for junk files (default: --dry-run).
           clean --execute --yes  Print the plan and move approved items to Trash.
@@ -142,11 +144,10 @@ public struct CLICommandRunner {
           version          Print version and license information.
           help             Show this help menu.
         
-        Örnekler:
+        Examples:
           MacOptimizer status
           MacOptimizer clean --dry-run
-        """)
-    }
+        """
 
     private static func categoryName(_ category: JunkCategoryType) -> String {
         switch category {

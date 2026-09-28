@@ -139,7 +139,8 @@ public struct CLICommandRunner {
     }
     
     private static func printVersion() {
-        // TODO(TASK-009): share the bundle version with the SwiftPM executable target.
+        // Scripts/build_app.sh writes the repo-root VERSION file into Info.plist, so the
+        // bundled app reports the release version. A bare `swift run` has no Info.plist.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             ?? Bundle.main.infoDictionary?["CFBundleVersion"] as? String
             ?? "Unknown"

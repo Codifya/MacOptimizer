@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Developer ID (non-App Store) build of MacOptimizer.
+
+  - Hardened runtime is enabled by the codesign "runtime" option in Scripts/release.sh,
+    not by this file.
+  - The app is NOT sandboxed (com.apple.security.app-sandbox is absent): it inspects and
+    cleans files across the user's Library, which a sandbox would not allow.
+  - No hardened-runtime exceptions are granted. The app is pure Swift with no JIT, no
+    unsigned executable memory, no dynamically loaded third-party libraries, no plugins,
+    and no DYLD environment variables, so none of
+    com.apple.security.cs.{allow-jit, allow-unsigned-executable-memory,
+    disable-library-validation, allow-dyld-environment-variables, disable-executable-page-protection}
+    is needed. Keychain access (own items) and outbound network requests (AI providers)
+    are allowed for unsandboxed hardened-runtime apps without entitlements.
+  - Add an entitlement here only with a documented, reproduced need (see docs/RELEASING.md).
+-->
+<plist version="1.0">
+<dict/>
+</plist>

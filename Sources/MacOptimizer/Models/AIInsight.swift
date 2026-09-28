@@ -56,6 +56,16 @@ public struct AIInsight: Identifiable, Codable, Sendable, Equatable {
         case critical = "Kritik"
         case recommendation = "Tavsiye"
         
+        /// Display label for the UI. The raw value stays unchanged because it is Codable-persisted.
+        public var localizedTitle: String {
+            switch self {
+            case .info: return L10n.string("Info", table: .ai)
+            case .warning: return L10n.string("Warning", table: .ai)
+            case .critical: return L10n.string("Critical", table: .ai)
+            case .recommendation: return L10n.string("Recommendation", table: .ai)
+            }
+        }
+
         public var colorName: String {
             switch self {
             case .info: return "blue"
@@ -80,7 +90,7 @@ public struct AIInsight: Identifiable, Codable, Sendable, Equatable {
         title: String,
         summary: String,
         severity: Severity,
-        category: String = "Sistem",
+        category: String = L10n.string("System", table: .ai),
         actions: [AIAction] = [],
         timestamp: Date = Date()
     ) {

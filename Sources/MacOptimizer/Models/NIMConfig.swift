@@ -9,8 +9,8 @@ public enum AIProviderType: String, Codable, Sendable, CaseIterable, Identifiabl
     
     public var displayName: String {
         switch self {
-        case .localHeuristics: return "🛡️ Yerel Kural Motoru (100% Çevrimdışı & Güvenli)"
-        case .nvidiaNIM: return "⚡ NVIDIA NIM (Bulut Llama 3.3 / DeepSeek R1)"
+        case .localHeuristics: return "🛡️ " + L10n.string("Local Rule Engine (100% Offline & Secure)", table: .ai)
+        case .nvidiaNIM: return "⚡ " + L10n.string("NVIDIA NIM (Cloud Llama 3.3 / DeepSeek R1)", table: .ai)
         }
     }
 }
@@ -39,42 +39,42 @@ public enum NIMAvailableModels {
             id: "meta/llama-3.3-70b-instruct",
             name: "Llama 3.3 70B Instruct",
             provider: "Meta",
-            description: "Dengeli, yüksek zekâ ve hızlı yanıt veren önerilen model.",
+            description: L10n.string("Balanced, highly capable, fast-responding recommended model.", table: .ai),
             isRecommended: true
         ),
         NIMModelOption(
             id: "meta/llama-3.1-405b-instruct",
             name: "Llama 3.1 405B Instruct",
             provider: "Meta",
-            description: "En kapsamlı ve en derin analiz kapasitesine sahip amiral gemisi model.",
+            description: L10n.string("Flagship model with the most comprehensive and deepest analysis capacity.", table: .ai),
             isRecommended: false
         ),
         NIMModelOption(
             id: "deepseek-ai/deepseek-r1",
             name: "DeepSeek R1",
             provider: "DeepSeek",
-            description: "Derin akıl yürütme ve problem çözmede uzmanlaşmış model.",
+            description: L10n.string("Model specialized in deep reasoning and problem solving.", table: .ai),
             isRecommended: true
         ),
         NIMModelOption(
             id: "mistralai/mistral-large-2-instruct",
             name: "Mistral Large 2",
             provider: "Mistral AI",
-            description: "İleri düzey mantık yürütme ve kod analizi.",
+            description: L10n.string("Advanced reasoning and code analysis.", table: .ai),
             isRecommended: false
         ),
         NIMModelOption(
             id: "nvidia/nemotron-4-340b-instruct",
             name: "NVIDIA Nemotron-4 340B",
             provider: "NVIDIA",
-            description: "NVIDIA tarafından eğitilmiş kurumsal büyük dil modeli.",
+            description: L10n.string("Enterprise large language model trained by NVIDIA.", table: .ai),
             isRecommended: false
         ),
         NIMModelOption(
             id: "meta/llama-3.1-8b-instruct",
             name: "Llama 3.1 8B Instruct",
             provider: "Meta",
-            description: "Ultra düşük gecikmeli, hızlı sistem analizi için hafif model.",
+            description: L10n.string("Lightweight model for ultra-low-latency, fast system analysis.", table: .ai),
             isRecommended: false
         )
     ]

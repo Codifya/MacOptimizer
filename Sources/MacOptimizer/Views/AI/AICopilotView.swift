@@ -90,7 +90,7 @@ public struct AICopilotView: View {
                 Spacer(minLength: 12)
                 
                 ActionButton(
-                    title: appState.isAnalyzingAI ? "Analiz Ediliyor..." : "Sistemi Yeniden Analiz Et",
+                    title: L10n.string(appState.isAnalyzingAI ? "Analyzing..." : "Analyze System Again", table: .ai),
                     iconName: "sparkles",
                     gradient: SystemTheme.primaryGradient,
                     isLoading: appState.isAnalyzingAI
@@ -130,7 +130,7 @@ public struct AICopilotView: View {
                                     Spacer()
                                     
                                     MetricBadge(text: insight.category, colorName: "purple")
-                                    MetricBadge(text: insight.severity.rawValue, colorName: insight.severity.colorName)
+                                    MetricBadge(text: insight.severity.localizedTitle, colorName: insight.severity.colorName)
                                 }
                                 
                                 Text(insight.summary)

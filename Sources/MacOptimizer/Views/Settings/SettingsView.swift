@@ -76,13 +76,13 @@ public struct SettingsView: View {
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         .sheet(isPresented: $showCloudDisclosure) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("NVIDIA NIM veri paylaşımı").font(.headline)
-                Text("Bulut sağlayıcısı etkinleştirildiğinde NVIDIA NIM şu verileri alır: Mac donanım modeli, çip, macOS sürümü, RAM/CPU/disk yüzdeleri, gereksiz dosya boyutu ve sohbet mesajlarınız.")
-                Text("Çalışan uygulama adları varsayılan olarak gönderilmez. Açarsanız uygulama adları ve işlem kimlikleri de NVIDIA NIM'e gönderilir.")
+                Text(l10n: "NVIDIA NIM data sharing", table: .ai).font(.headline)
+                Text(l10n: "When the cloud provider is enabled, NVIDIA NIM receives: Mac hardware model, chip, macOS version, RAM/CPU/disk percentages, junk file size, and your chat messages.", table: .ai)
+                Text(l10n: "Running app names are not sent by default. If you turn this on, app names and process IDs are also sent to NVIDIA NIM.", table: .ai)
                 HStack {
-                    Button("İptal") { selectedProvider = .localHeuristics; saveAIConfig(); showCloudDisclosure = false }
+                    Button(L10n.string("Cancel", table: .ai)) { selectedProvider = .localHeuristics; saveAIConfig(); showCloudDisclosure = false }
                     Spacer()
-                    Button("Etkinleştir") { cloudDisclosureAccepted = true; saveAIConfig(); showCloudDisclosure = false }.keyboardShortcut(.defaultAction)
+                    Button(L10n.string("Enable", table: .ai)) { cloudDisclosureAccepted = true; saveAIConfig(); showCloudDisclosure = false }.keyboardShortcut(.defaultAction)
                 }
             }.padding(24).frame(width: 460)
         }
@@ -117,10 +117,10 @@ public struct SettingsView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Ayarlar & Yapay Zeka Platformu")
+                    Text(l10n: "Settings & AI Platform", table: .ai)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
-                    Text("Çoklu AI sağlayıcıları (Yerel/Bulut), Keychain anahtar kasası, otonom koruma eşikleri.")
+                    Text(l10n: "Multiple AI providers (local/cloud), Keychain key vault, autonomous protection thresholds.", table: .ai)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -136,7 +136,7 @@ public struct SettingsView: View {
         GlassCard(cornerRadius: 16, padding: 18) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Yapay Zeka ve Teşhis Motoru", systemImage: "sparkles")
+                    Label(L10n.string("AI & Diagnostics Engine", table: .ai), systemImage: "sparkles")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.purple)
                     
@@ -155,14 +155,14 @@ public struct SettingsView: View {
                     }
                 }
                 
-                Text("Mac'inizin sağlık teşhislerini yapacak ve Copilot sohbetini yönetecek yapay zeka sağlayıcısını seçin.")
+                Text(l10n: "Choose the AI provider that will run your Mac’s health diagnostics and manage the Copilot chat.", table: .ai)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 
                 if selectedProvider == .nvidiaNIM {
-                    Text("NVIDIA NIM alır: donanım modeli, çip, macOS sürümü, RAM/CPU/disk yüzdeleri, gereksiz dosya boyutu ve sohbet mesajları.")
+                    Text(l10n: "NVIDIA NIM receives: hardware model, chip, macOS version, RAM/CPU/disk percentages, junk file size, and chat messages.", table: .ai)
                         .font(.system(size: 11)).foregroundColor(.secondary)
-                    Toggle("Çalışan uygulama adlarını dahil et", isOn: $includeRunningAppNames)
+                    Toggle(L10n.string("Include running app names", table: .ai), isOn: $includeRunningAppNames)
                         .font(.system(size: 12))
                 }
                 Divider()
@@ -175,9 +175,9 @@ public struct SettingsView: View {
                             .foregroundColor(.green)
                         
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("100% Çevrimdışı ve Gizli Kural Motoru")
+                            Text(l10n: "100% Offline and Private Rule Engine", table: .ai)
                                 .font(.system(size: 13, weight: .bold))
-                            Text("Sıfır ağ trafiği. Sistem telemetrisi doğrudan Darwin çekirdeğinden okunur ve hiçbir veri bilgisayarınızın dışına çıkmaz.")
+                            Text(l10n: "Zero network traffic. System telemetry is read directly from the Darwin kernel and no data ever leaves your computer.", table: .ai)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -193,12 +193,12 @@ public struct SettingsView: View {
                         // API Key Field with Keychain
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
-                                Text("NVIDIA NIM API Anahtarı (Keychain Korumalı):")
+                                Text(l10n: "NVIDIA NIM API Key (Keychain Protected):", table: .ai)
                                     .font(.system(size: 12, weight: .semibold))
                                 
                                 Spacer()
                                 
-                                Button("API Anahtarı Al (build.nvidia.com) ↗") {
+                                Button(L10n.string("Get API Key (build.nvidia.com) ↗", table: .ai)) {
                                     if let url = URL(string: "https://build.nvidia.com") {
                                         NSWorkspace.shared.open(url)
                                     }
@@ -236,7 +236,7 @@ public struct SettingsView: View {
                         
                         // Base URL
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("NVIDIA Base URL:")
+                            Text(l10n: "NVIDIA Base URL:", table: .ai)
                                 .font(.system(size: 12, weight: .semibold))
                             
                             TextField("https://integrate.api.nvidia.com/v1", text: $baseURLInput)
@@ -251,9 +251,9 @@ public struct SettingsView: View {
                         
                         // Model Selection Mode
                         VStack(alignment: .leading, spacing: 8) {
-                            Picker("Model Listesi", selection: $selectedModel) {
+                            Picker(L10n.string("Model List", table: .ai), selection: $selectedModel) {
                                 ForEach(filteredModels) { model in
-                                    Text("\(model.name)\(model.isRecommended ? " ★ (Önerilen)" : "")")
+                                    Text(verbatim: model.isRecommended ? L10n.string("%@ ★ (Recommended)", table: .ai, model.name) : model.name)
                                         .tag(model.id)
                                 }
                             }
@@ -277,7 +277,7 @@ public struct SettingsView: View {
                                     } else {
                                         Image(systemName: "bolt.horizontal.fill")
                                     }
-                                    Text(appState.isTestingNIM ? "Test Ediliyor..." : "NVIDIA NIM Bağlantısını Test Et")
+                                    Text(l10n: appState.isTestingNIM ? "Testing..." : "Test NVIDIA NIM Connection", table: .ai)
                                 }
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
@@ -313,7 +313,7 @@ public struct SettingsView: View {
         GlassCard(cornerRadius: 16, padding: 18) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Otonom İzleme & Otomatik Müdahale İlkeleri", systemImage: "shield.checkered")
+                    Label(L10n.string("Autonomous Monitoring & Automatic Intervention Policies", table: .ai), systemImage: "shield.checkered")
                         .font(.system(size: 14, weight: .bold))
                     
                     Spacer()
@@ -328,10 +328,10 @@ public struct SettingsView: View {
                 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Bellek Baskısı Uyarı Eşiği:")
+                        Text(l10n: "Memory Pressure Warning Threshold:", table: .ai)
                             .font(.system(size: 12))
                         Spacer()
-                        Text("%\(Int(ramThreshold))")
+                        Text(verbatim: L10n.string("%lld%%", table: .ai, Int64(ramThreshold)))
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.blue)
                     }
@@ -342,10 +342,10 @@ public struct SettingsView: View {
                 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Kaçak Süreç (Runaway CPU) Algılama Eşiği:")
+                        Text(l10n: "Runaway Process (CPU) Detection Threshold:", table: .ai)
                             .font(.system(size: 12))
                         Spacer()
-                        Text("%\(Int(cpuRunawayThreshold))")
+                        Text(verbatim: L10n.string("%lld%%", table: .ai, Int64(cpuRunawayThreshold)))
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.orange)
                     }
@@ -354,7 +354,7 @@ public struct SettingsView: View {
                         .onChange(of: cpuRunawayThreshold) { _, _ in saveAutonomous() }
                 }
                 
-                Toggle("Anomali tespit edildiğinde macOS bildirimi gönder", isOn: $notifyOnAnomalies)
+                Toggle(L10n.string("Send a macOS notification when an anomaly is detected", table: .ai), isOn: $notifyOnAnomalies)
                     .font(.system(size: 12))
                     .onChange(of: notifyOnAnomalies) { _, _ in saveAutonomous() }
             }
@@ -365,10 +365,10 @@ public struct SettingsView: View {
     private var generalPreferencesCard: some View {
         GlassCard(cornerRadius: 16, padding: 18) {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Genel ve Menü Çubuğu", systemImage: "bell.fill")
+                Label(L10n.string("General & Menu Bar", table: .ai), systemImage: "bell.fill")
                     .font(.system(size: 14, weight: .bold))
                 
-                Toggle("Menü Çubuğunda (Menu Bar) canlı durum simgesi göster", isOn: $showMenuBarExtra)
+                Toggle(L10n.string("Show live status icon in the menu bar", table: .ai), isOn: $showMenuBarExtra)
                     .font(.system(size: 12))
             }
         }
@@ -387,7 +387,7 @@ public struct SettingsView: View {
                     MetricBadge(text: "Zero-Harm • Apache 2.0", colorName: "green")
                 }
                 
-                Text("Açık kaynaklı, güvenlik öncelikli, yerel macOS sistem sağlığı ve optimizasyon araç seti.")
+                Text(l10n: "Open-source, security-first, local macOS system health and optimization toolkit.", table: .ai)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }

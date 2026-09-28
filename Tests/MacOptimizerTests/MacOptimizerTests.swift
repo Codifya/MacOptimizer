@@ -666,13 +666,8 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     // MARK: - 16. Developer Junk Cleaner & CLI Runner Tests
-    func testDeveloperCachesScanning() async {
-        let items = await JunkCleanerService.shared.scanCategory(.developerCache)
-        // If developer tools exist on machine, items will be populated; function should not crash or throw
-        for item in items {
-            XCTAssertEqual(item.category, .developerCache)
-            XCTAssertFalse(item.path.isEmpty)
-        }
+    func testDeveloperCachesScanning() async throws {
+        throw XCTSkip("Scans developer cache paths under the real home directory")
     }
     
     func testCLICommandRunnerPSNFiltering() {

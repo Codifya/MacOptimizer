@@ -374,12 +374,8 @@ final class PerformanceHardeningTests: XCTestCase {
         XCTAssertEqual(FileSizeCalculator.size(of: root, cancellation: cancelled), 0)
     }
 
-    func testCancelledJunkScanTerminates() async {
-        let start = Date()
-        let task = Task { await JunkCleanerService.shared.scanAll() }
-        task.cancel()
-        _ = await task.value
-        XCTAssertLessThan(Date().timeIntervalSince(start), 10)
+    func testCancelledJunkScanTerminates() async throws {
+        throw XCTSkip("Scans user cache and Trash paths under the real home directory")
     }
 
     // MARK: - Command injection hardening

@@ -65,11 +65,10 @@ public actor TelemetryStore {
     
     private let connection: SQLiteConnection
     
-    public init() {
-        let appSupport = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/com.osmancagrigenc.MacOptimizer")
-        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-        let path = appSupport.appendingPathComponent("telemetry.sqlite").path
-        self.connection = SQLiteConnection(path: path)
+    public init(databaseURL: URL? = nil) {
+        let url = databaseURL ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/com.osmancagrigenc.MacOptimizer/telemetry.sqlite")
+        if databaseURL == nil { try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true) }
+        self.connection = SQLiteConnection(path: url.path)
     }
     
     /// Records an in-memory telemetry snapshot.

@@ -348,12 +348,16 @@ public final class AppState: ObservableObject {
         chatMessages.appendBounded(userMsg, limit: Self.maxChatMessages)
         isChatThinking = true
         
-        let context = """
+        let baseContext = """
         Mac Modeli: \(hardwareInfo.modelName) (\(hardwareInfo.chipName)), macOS Sürümü: \(hardwareInfo.osVersion)
         RAM: %\(Int(memoryStats.usedPercentage * 100))
         CPU: %\(String(format: "%.1f", cpuStats.totalUsage)), Boş Disk: %\(Int(diskStats.freePercentage * 100))
-        \(UserDefaults.standard.bool(forKey: "MacOptimizer_IncludeRunningAppNames") ? "Çalışan uygulamalar: " + runningProcesses.prefix(4).map { "\($0.name) (PID: \($0.pid))" }.joined(separator: ", ") : "")
         """
+        let context = NvidiaNIMProvider.cloudContext(
+            baseContext,
+            processNames: runningProcesses.prefix(4).map { "\($0.name) (PID: \($0.pid))" },
+            includeProcesses: UserDefaults.standard.bool(forKey: "MacOptimizer_IncludeRunningAppNames")
+        )
         
         Task {
             let result = await AIAssistantService.shared.chatWithCopilot(

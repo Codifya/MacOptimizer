@@ -132,7 +132,7 @@ public struct PathProtectionPolicy: Sendable {
             if let injectedHome, (canonicalPath == injectedHome || canonicalPath.hasPrefix(injectedHome + "/")), (sysRoot == "/private" || sysRoot == "/var") { continue }
             if canonicalPath == sysRoot || canonicalPath.hasPrefix("\(sysRoot)/") || trimmed == sysRoot || trimmed.hasPrefix("\(sysRoot)/") {
                 // If it's inside /Users/username (and not /Users itself), allow subpath validation
-                let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
+                let home = injectedHome ?? FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
                 if (canonicalPath.hasPrefix("\(home)/") || canonicalPath == home) && sysRoot == "/Users" {
                     continue
                 }

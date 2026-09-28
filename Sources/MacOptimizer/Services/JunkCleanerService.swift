@@ -12,16 +12,23 @@ public final class JunkCleanerService: Sendable {
     public static let shared = JunkCleanerService()
     
     private var fileManager: FileManager { FileManager.default }
-    private let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+    private let homeDirectory: URL
+    private let rootDirectory: URL
     
-    public init() {}
+    public init(
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser,
+        rootDirectory: URL = URL(fileURLWithPath: "/")
+    ) {
+        self.homeDirectory = homeDirectory
+        self.rootDirectory = rootDirectory
+    }
     
     // MARK: - Dry-Run CleaningPlan Generation
     public func generateCleaningPlan(from groups: [JunkCategoryGroup]) async -> CleaningPlan {
-        await runBlocking(qos: .userInitiated) { _ in Self.buildCleaningPlan(from: groups) }
+        await runBlocking(qos: .userInitiated) { _ in Self.buildCleaningPlan(from: groups, homeDirectory: self.homeDirectory) }
     }
     
-    private static func buildCleaningPlan(from groups: [JunkCategoryGroup]) -> CleaningPlan {
+    private static func buildCleaningPlan(from groups: [JunkCategoryGroup], homeDirectory: URL) -> CleaningPlan {
         var plannedItems: [CleanableItemPlan] = []
         var warnings: [String] = []
         
@@ -32,7 +39,7 @@ public final class JunkCleanerService: Sendable {
                     continue
                 }
                 let canonicalPath = URL(fileURLWithPath: item.path).resolvingSymlinksInPath().standardizedFileURL.path
-                let risk = OperationRiskClassifier.classifyFileRemoval(path: canonicalPath)
+                let risk = OperationRiskClassifier.classifyFileRemoval(path: canonicalPath, homeDirectory: homeDirectory)
                 
                 // Never add forbidden paths into the plan
                 if risk == .forbidden {
@@ -195,7 +202,7 @@ public final class JunkCleanerService: Sendable {
         items.append(contentsOf: scanSubdirectories(in: userLogsURL, category: .systemLogs, flag))
         
         let crashReporterURL = homeDirectory.appendingPathComponent("Library/Logs/DiagnosticReports")
-        if fileManager.fileExists(atPath: crashReporterURL.path) && PathProtectionPolicy.isCleanableCachePath(crashReporterURL.path) {
+        if fileManager.fileExists(atPath: crashReporterURL.path) && PathProtectionPolicy.isCleanableCachePath(crashReporterURL.path, homeDirectory: homeDirectory) {
             let size = FileSizeCalculator.size(of: crashReporterURL, cancellation: flag)
             if size > 0 {
                 items.append(JunkFileItem(
@@ -236,7 +243,7 @@ public final class JunkCleanerService: Sendable {
         
         for target in devTargets where !flag.isCancelled {
             let url = homeDirectory.appendingPathComponent(target.path)
-            if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path) {
+            if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path, homeDirectory: homeDirectory) {
                 let size = FileSizeCalculator.size(of: url, cancellation: flag)
                 if size > 0 {
                     items.append(JunkFileItem(
@@ -270,7 +277,7 @@ public final class JunkCleanerService: Sendable {
         
         for browser in browserPaths where !flag.isCancelled {
             let url = homeDirectory.appendingPathComponent(browser.path)
-            if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path) {
+            if fileManager.fileExists(atPath: url.path) && PathProtectionPolicy.isCleanableCachePath(url.path, homeDirectory: homeDirectory) {
                 let size = FileSizeCalculator.size(of: url, cancellation: flag)
                 if size > 0 {
                     items.append(JunkFileItem(
@@ -369,8 +376,8 @@ public final class JunkCleanerService: Sendable {
         // 1. Gather all installed bundle identifiers & app names
         var installedNames: Set<String> = []
         let appDirs = [
-            URL(fileURLWithPath: "/Applications"),
-            URL(fileURLWithPath: "/System/Applications"),
+            rootDirectory.appendingPathComponent("Applications"),
+            rootDirectory.appendingPathComponent("System/Applications"),
             homeDirectory.appendingPathComponent("Applications")
         ]
         
@@ -448,7 +455,7 @@ public final class JunkCleanerService: Sendable {
         
         for url in contents {
             if flag.isCancelled { break }
-            guard PathProtectionPolicy.isCleanableCachePath(url.path) else { continue }
+            guard PathProtectionPolicy.isCleanableCachePath(url.path, homeDirectory: homeDirectory) else { continue }
             
             let size = FileSizeCalculator.size(of: url, cancellation: flag)
             if size > 1024 * 1024 { // Only include items > 1MB

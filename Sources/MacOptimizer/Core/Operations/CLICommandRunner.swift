@@ -1,6 +1,6 @@
 import Foundation
 
-/// Headless CLI Command Runner for Terminal usage (`macopt` / `MacOptimizer status|clean|purge-ram|version|--help`).
+/// Headless CLI Command Runner for Terminal usage (`macopt` / `MacOptimizer status|clean|version|--help`).
 public struct CLICommandRunner {
 
     public static func executionRequestedWithoutConfirmation(_ args: [String]) -> Bool {
@@ -33,9 +33,6 @@ public struct CLICommandRunner {
             }
             await runJunkClean(dryRun: !execute, includeTrash: args.contains("--include-trash"))
             
-        case "purge-ram":
-            await runRAMPurge()
-            
         case "version", "-v", "--version":
             printVersion()
             
@@ -53,6 +50,8 @@ public struct CLICommandRunner {
     
     private static func printSystemStatus() async {
         let mem = await SystemMonitorService.shared.fetchMemoryStats()
+        _ = await SystemMonitorService.shared.fetchCPUStats()
+        try? await Task.sleep(nanoseconds: 200_000_000)
         let cpu = await SystemMonitorService.shared.fetchCPUStats()
         let disk = await SystemMonitorService.shared.fetchDiskStats()
         let batt = await SystemMonitorService.shared.fetchBatteryStats()
@@ -118,14 +117,12 @@ public struct CLICommandRunner {
         }
     }
     
-    private static func runRAMPurge() async {
-        print("🧹 Inactive RAM önbellekleri güvenle boşaltılıyor...")
-        let result = await MemoryOptimizerService.shared.purgeMemory()
-        print("✨ Başarılı! \(ByteFormatter.formatMemory(result.freedBytes)) RAM alanı serbest bırakıldı.")
-    }
-    
     private static func printVersion() {
-        print("MacOptimizer Pro v2.4.0 (Zero-Harm Defense-in-Depth Native macOS Toolkit)")
+        // TODO(TASK-009): share the bundle version with the SwiftPM executable target.
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+            ?? Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+            ?? "Bilinmiyor"
+        print("MacOptimizer Pro v\(version)")
         print("Apache License 2.0 • https://github.com/Codifya/MacOptimizer")
     }
     
@@ -141,14 +138,12 @@ public struct CLICommandRunner {
           clean            Gereksiz dosya taraması yapar (Varsayılan: --dry-run).
           clean --execute --yes  Planı yazdırıp onaylanan öğeleri Çöp Sepeti'ne taşır.
           --include-trash       Çöp Kutusu öğelerini plana ekler (ek onay gerektirir).
-          purge-ram        Pasif sistem önbelleklerini temizleyerek RAM boşaltır.
           version          Sürüm ve lisans bilgisini görüntüler.
           help             Bu yardım menüsünü görüntüler.
         
         Örnekler:
           MacOptimizer status
           MacOptimizer clean --dry-run
-          MacOptimizer purge-ram
         """)
     }
 }

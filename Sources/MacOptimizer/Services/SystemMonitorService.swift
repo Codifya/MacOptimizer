@@ -111,10 +111,10 @@ public actor SystemMonitorService: SystemMetricsSampling {
                 cpuStats.userUsage = Swift.max(0.0, Swift.min(100.0, (userDelta / totalDelta) * 100.0))
                 cpuStats.systemUsage = Swift.max(0.0, Swift.min(100.0, (sysDelta / totalDelta) * 100.0))
                 cpuStats.idleUsage = Swift.max(0.0, Swift.min(100.0, (idleDelta / totalDelta) * 100.0))
-                cpuStats.totalUsage = Swift.max(0.0, Swift.min(100.0, 100.0 - cpuStats.idleUsage))
+                cpuStats.totalUsage = Self.sampledCPUUsage(previous: [last.cpu_ticks.0, last.cpu_ticks.1, last.cpu_ticks.2, last.cpu_ticks.3].map(UInt64.init), current: [cpuLoad.cpu_ticks.0, cpuLoad.cpu_ticks.1, cpuLoad.cpu_ticks.2, cpuLoad.cpu_ticks.3].map(UInt64.init)) ?? 0
             } else {
-                cpuStats.totalUsage = 15.0
-                cpuStats.idleUsage = 85.0
+                cpuStats.totalUsage = 0
+                cpuStats.idleUsage = 0
             }
             lastCPULoadInfo = cpuLoad
         }
@@ -237,10 +237,12 @@ public actor SystemMonitorService: SystemMetricsSampling {
                         let tempC = (temp > 1000) ? (Double(temp) / 100.0) : (Double(temp) / 10.0 - 273.15)
                         stats.temperatureCelsius = Swift.max(0.0, Swift.min(100.0, tempC))
                     }
-                    if let maxCap = props["MaxCapacity"] as? Int,
-                       let designCap = props["DesignCapacity"] as? Int, designCap > 0 {
+                    if let designCap = props["DesignCapacity"] as? Int, designCap > 0,
+                       (props["AppleRawMaxCapacity"] is Int || props["NominalChargeCapacity"] is Int || props["MaxCapacity"] is Int) {
                         stats.designCapacityMah = designCap
-                        stats.healthPercentage = Swift.min(100, Int((Double(maxCap) / Double(designCap)) * 100.0))
+                        stats.healthPercentage = Self.batteryHealthPercentage(properties: props.compactMapValues { $0 as? Int })
+                    } else if let percentage = props["MaxCapacity"] as? Int {
+                        stats.healthPercentage = min(100, max(0, percentage))
                     }
                     if let isPermanentFail = props["PermanentFailureStatus"] as? Int, isPermanentFail != 0 {
                         stats.condition = "Servis Öneriliyor"
@@ -256,6 +258,21 @@ public actor SystemMonitorService: SystemMetricsSampling {
         }
         
         return stats
+    }
+
+    static func batteryHealthPercentage(properties: [String: Int]) -> Int {
+        guard let design = properties["DesignCapacity"], design > 0 else { return 0 }
+        let capacity = properties["AppleRawMaxCapacity"] ?? properties["NominalChargeCapacity"] ?? properties["MaxCapacity"] ?? 0
+        return min(100, max(0, Int((Double(capacity) / Double(design) * 100).rounded())))
+    }
+
+    static func sampledCPUUsage(previous: [UInt64], current: [UInt64]) -> Double? {
+        guard previous.count == 4, current.count == 4,
+              zip(previous, current).allSatisfy({ $1 >= $0 }) else { return nil }
+        let deltas = zip(previous, current).map { Double($1 - $0) }
+        let total = deltas.reduce(0, +)
+        guard total > 0 else { return nil }
+        return min(100, max(0, ((deltas[0] + deltas[1] + deltas[3]) / total) * 100))
     }
     
     // MARK: - Hardware Information

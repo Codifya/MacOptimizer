@@ -12,6 +12,7 @@ public enum ApprovedExecutable: String, Sendable, CaseIterable {
     case csrutil     = "/usr/bin/csrutil"
     case spctl       = "/usr/sbin/spctl"
     case defaults    = "/usr/bin/defaults"
+    case socketfilterfw = "/usr/libexec/ApplicationFirewall/socketfilterfw"
 }
 
 /// Execution result for sandboxed commands.

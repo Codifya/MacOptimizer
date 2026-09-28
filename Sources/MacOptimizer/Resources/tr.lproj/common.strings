@@ -31,7 +31,6 @@
 "Scan for Junk Files" = "Gereksiz Dosyaları Tara";
 "Starting…" = "Başlatılıyor…";
 "Scanning…" = "Taranıyor…";
-"Found and listed %lld models from NVIDIA NIM." = "NVIDIA NIM üzerinden %lld model bulundu ve listelendi.";
 "Model scan failed: %@" = "Model taraması başarısız: %@";
 "Security blocked the action: %@ is a macOS system component and cannot be terminated." = "Güvenlik engeli: %@ bir macOS sistem bileşenidir ve sonlandırılamaz.";
 "Process %@ was terminated successfully." = "%@ süreci başarıyla sonlandırıldı.";

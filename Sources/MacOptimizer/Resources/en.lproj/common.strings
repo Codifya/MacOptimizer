@@ -31,7 +31,6 @@
 "Scan for Junk Files" = "Scan for Junk Files";
 "Starting…" = "Starting…";
 "Scanning…" = "Scanning…";
-"Found and listed %lld models from NVIDIA NIM." = "Found and listed %lld models from NVIDIA NIM.";
 "Model scan failed: %@" = "Model scan failed: %@";
 "Security blocked the action: %@ is a macOS system component and cannot be terminated." = "Security blocked the action: %@ is a macOS system component and cannot be terminated.";
 "Process %@ was terminated successfully." = "Process %@ was terminated successfully.";

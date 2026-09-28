@@ -16,13 +16,6 @@ let package = Package(
             name: "MacOptimizer",
             dependencies: [],
             path: "Sources/MacOptimizer",
-            exclude: [
-                "Resources/common.xcstrings",
-                "Resources/dashboard.xcstrings",
-                "Resources/cleanup.xcstrings",
-                "Resources/ai.xcstrings",
-                "Resources/services.xcstrings",
-            ],
             resources: [.process("Resources")]
         ),
         .testTarget(

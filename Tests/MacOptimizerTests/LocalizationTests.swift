@@ -3,27 +3,23 @@ import XCTest
 @testable import MacOptimizer
 
 final class LocalizationTests: XCTestCase {
-    func testEveryCatalogHasEnglishAndTurkishValues() throws {
-        let resources = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Sources/MacOptimizer/Resources")
-        let catalogs = try FileManager.default.contentsOfDirectory(at: resources, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "xcstrings" }
-        XCTAssertEqual(Set(catalogs.map { $0.deletingPathExtension().lastPathComponent }), Set(L10n.Table.allCases.map(\.rawValue)))
+    private let tables = ["common", "dashboard", "cleanup", "ai", "services"]
 
-        for catalog in catalogs {
-            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalog)) as? [String: Any])
-            let strings = try XCTUnwrap(root["strings"] as? [String: Any])
-            for (key, rawEntry) in strings {
-                let entry = try XCTUnwrap(rawEntry as? [String: Any], "Invalid entry \(key) in \(catalog.lastPathComponent)")
-                let localizations = try XCTUnwrap(entry["localizations"] as? [String: Any], "Missing localizations for \(key)")
-                for language in ["en", "tr"] {
-                    let localization = try XCTUnwrap(localizations[language] as? [String: Any], "Missing \(language) value for \(key)")
-                    let unit = try XCTUnwrap(localization["stringUnit"] as? [String: Any], "Missing \(language) string unit for \(key)")
-                    XCTAssertFalse((unit["value"] as? String ?? "").isEmpty, "Empty \(language) value for \(key)")
-                }
+    func testEveryTableHasMatchingEnglishAndTurkishValues() throws {
+        let resources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/MacOptimizer/Resources")
+
+        for table in tables {
+            let english = try entries(in: resources, language: "en", table: table)
+            let turkish = try entries(in: resources, language: "tr", table: table)
+            XCTAssertEqual(Set(english.keys), Set(turkish.keys), "Key mismatch in \(table)")
+            for key in english.keys {
+                let en = try XCTUnwrap(english[key])
+                let tr = try XCTUnwrap(turkish[key])
+                XCTAssertFalse(en.values.isEmpty || en.values.contains(""), "Empty English value for \(key)")
+                XCTAssertFalse(tr.values.isEmpty || tr.values.contains(""), "Empty Turkish value for \(key)")
+                XCTAssertEqual(en.specifiers, tr.specifiers, "Format specifier mismatch for \(key)")
             }
         }
     }
@@ -47,8 +43,51 @@ final class LocalizationTests: XCTestCase {
         }
         XCTAssertEqual(L10n.string("Dashboard"), "Genel Bakış")
     }
-}
 
-private extension L10n.Table {
-    static var allCases: [Self] { [.common, .dashboard, .cleanup, .ai, .services] }
+    private struct Entry {
+        var values: [String]
+        var specifiers: [String]
+    }
+
+    private func entries(in root: URL, language: String, table: String) throws -> [String: Entry] {
+        let directory = root.appendingPathComponent("\(language).lproj")
+        var result: [String: Entry] = [:]
+        let stringsURL = directory.appendingPathComponent("\(table).strings")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stringsURL.path), "Missing \(stringsURL.path)")
+        for ext in ["strings", "stringsdict"] {
+            let url = directory.appendingPathComponent("\(table).\(ext)")
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            let data = try Data(contentsOf: url)
+            let object = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+            guard let dictionary = object as? [String: Any] else {
+                XCTFail("Invalid \(url.lastPathComponent)")
+                continue
+            }
+            for (key, value) in dictionary {
+                let strings = stringValues(value)
+                let specifiers = strings.flatMap(formatSpecifiers)
+                var entry = result[key] ?? Entry(values: [], specifiers: [])
+                entry.values += strings
+                entry.specifiers += specifiers
+                result[key] = entry
+            }
+        }
+        return result
+    }
+
+    private func stringValues(_ value: Any) -> [String] {
+        if let string = value as? String { return [string] }
+        if let dictionary = value as? [String: Any] {
+            return dictionary.filter { !$0.key.hasPrefix("NSString") }.values.flatMap(stringValues)
+        }
+        if let array = value as? [Any] { return array.flatMap(stringValues) }
+        return []
+    }
+
+    private func formatSpecifiers(in value: String) -> [String] {
+        let pattern = #"%(?:[0-9]+\$)?[-+#0 ]*(?:[0-9]+|\*)?(?:\.(?:[0-9]+|\*))?(?:hh|h|ll|l|L|z|t|j)?[@diuoxXfFeEgGaAcCsSp]"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(value.startIndex..., in: value)
+        return regex.matches(in: value, range: range).compactMap { Range($0.range, in: value).map { String(value[$0]) } }.sorted()
+    }
 }

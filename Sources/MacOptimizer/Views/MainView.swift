@@ -23,7 +23,7 @@ public struct MainView: View {
             Alert(
                 title: Text("MacOptimizer"),
                 message: Text(appState.activeAlertMessage ?? ""),
-                dismissButton: .default(Text("Tamam"))
+                dismissButton: .default(Text(l10n: "Done"))
             )
         }
     }
@@ -42,7 +42,7 @@ public struct MainView: View {
                         .font(.system(size: 15, weight: .bold))
                     
                     HStack(spacing: 4) {
-                        Text("AI & Otonom 2.0")
+                        Text(l10n: "AI & Autonomous 2.0")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(.blue)
                     }
@@ -60,7 +60,7 @@ public struct MainView: View {
             
             // Navigation List
             List(selection: $appState.selectedTab) {
-                Section(header: Text("YAPAY ZEKA & OTONOM").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
+                Section(header: Text(l10n: "AI & Autonomous").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
                     NavigationLink(value: NavigationTab.dashboard) {
                         Label(NavigationTab.dashboard.title, systemImage: NavigationTab.dashboard.iconName)
                     }
@@ -94,7 +94,7 @@ public struct MainView: View {
                     }
                 }
                 
-                Section(header: Text("OPTİMİZASYON").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
+                Section(header: Text(l10n: "Optimization").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
                     NavigationLink(value: NavigationTab.memory) {
                         HStack {
                             Label(NavigationTab.memory.title, systemImage: NavigationTab.memory.iconName)
@@ -112,7 +112,7 @@ public struct MainView: View {
                     }
                 }
                 
-                Section(header: Text("UYGULAMALAR").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
+                Section(header: Text(l10n: "Applications").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
                     NavigationLink(value: NavigationTab.appManager) {
                         Label(NavigationTab.appManager.title, systemImage: NavigationTab.appManager.iconName)
                     }
@@ -138,7 +138,7 @@ public struct MainView: View {
                     }
                 }
                 
-                Section(header: Text("SİSTEM").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
+                Section(header: Text(l10n: "System").font(.system(size: 10, weight: .bold)).foregroundColor(.secondary)) {
                     NavigationLink(value: NavigationTab.maintenance) {
                         Label(NavigationTab.maintenance.title, systemImage: NavigationTab.maintenance.iconName)
                     }
@@ -173,7 +173,7 @@ public struct MainView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Kullanılabilir RAM")
+                    Text(l10n: "Available RAM")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
                     SidebarAvailableMemoryText(metrics: appState.metrics)

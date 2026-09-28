@@ -28,7 +28,7 @@ public struct CLICommandRunner {
         case "clean":
             let execute = args.contains("--execute")
             if executionRequestedWithoutConfirmation(args) {
-                print("Güvenlik için --execute ile birlikte --yes gerekli.")
+                print("For safety, --yes is required with --execute.")
                 exit(2)
             }
             await runJunkClean(dryRun: !execute, includeTrash: args.contains("--include-trash"))
@@ -40,7 +40,7 @@ public struct CLICommandRunner {
             printHelp()
             
         default:
-            print("⚠️ Bilinmeyen komut: \(command)")
+            print("⚠️ Unknown command: \(command)")
             printHelp()
             exit(1)
         }
@@ -61,59 +61,59 @@ public struct CLICommandRunner {
         ========================================================
         ⚡ MacOptimizer Pro System Status
         ========================================================
-        💻 Donanım:      \(hw.modelName) (\(hw.chipName))
+        💻 Hardware:     \(hw.modelName) (\(hw.chipName))
         🍏 macOS:        \(hw.osVersion)
-        ⏱️  Çalışma:      \(hw.uptimeString)
+        ⏱️  Uptime:       \(hw.uptimeString)
         
-        🧠 RAM Kullanım: \(ByteFormatter.formatMemory(mem.actualUsedBytes)) / \(ByteFormatter.formatMemory(mem.totalBytes)) (%\(Int(mem.usedPercentage * 100)))
-        📊 RAM Baskısı:  \(mem.pressureLevel.rawValue)
-        💾 Swap Takas:   \(ByteFormatter.formatMemory(mem.swapUsedBytes)) / \(ByteFormatter.formatMemory(mem.swapTotalBytes))
+        🧠 Memory Used:  \(ByteFormatter.formatMemory(mem.actualUsedBytes)) / \(ByteFormatter.formatMemory(mem.totalBytes)) (\(Int(mem.usedPercentage * 100))%)
+        📊 Memory Pressure: \(mem.pressureLevel.rawValue)
+        💾 Swap Used:    \(ByteFormatter.formatMemory(mem.swapUsedBytes)) / \(ByteFormatter.formatMemory(mem.swapTotalBytes))
         
-        🔥 CPU Kullanım: %\(String(format: "%.1f", cpu.totalUsage)) (\(cpu.physicalCores) Çekirdek)
-        🌡️ Termal Durum: \(cpu.thermalState.rawValue)
+        🔥 CPU Usage:    \(String(format: "%.1f", cpu.totalUsage))% (\(cpu.physicalCores) cores)
+        🌡️ Thermal State: \(cpu.thermalState.rawValue)
         
-        💽 Disk Alanı:   \(ByteFormatter.format(disk.usedBytes)) Kullanılan / \(ByteFormatter.format(disk.freeBytes)) Boş
-        🔋 Pil Durumu:   %\(batt.percentage) (\(batt.powerSource))
+        💽 Disk:         \(ByteFormatter.format(disk.usedBytes)) used / \(ByteFormatter.format(disk.freeBytes)) free
+        🔋 Battery:      \(batt.percentage)% (\(batt.powerSource))
         ========================================================
         """)
     }
     
     private static func runJunkClean(dryRun: Bool, includeTrash: Bool) async {
-        print("🔍 Gereksiz dosyalar ve önbellekler taranıyor...")
+        print("🔍 Scanning for junk files and caches...")
         let groups = await JunkCleanerService.shared.scanAll()
         let trashItems = groups.first(where: { $0.type == .trashBin })?.items ?? []
         var plan = await JunkCleanerService.shared.generateCleaningPlan(from: groups)
         if !includeTrash { plan.items = plan.items.filter { $0.category != .trashBin } }
         
-        print("\n📊 Bulunan Gereksiz Dosyalar:")
+        print("\n📊 Junk Files Found:")
         print("--------------------------------------------------------")
         for group in groups {
             let totalGroupBytes = group.items.reduce(0) { $0 + $1.sizeBytes }
-            print("• \(group.type.title): \(group.items.count) öğe (\(ByteFormatter.format(totalGroupBytes)))")
+            print("• \(categoryName(group.type)): \(group.items.count) items (\(ByteFormatter.format(totalGroupBytes)))")
         }
         print("--------------------------------------------------------")
-        print("Toplam Kurtarılabilir Alan: \(ByteFormatter.format(plan.selectedEstimatedBytes))")
-        print("Maksimum Risk Derecesi:   \(plan.maxRiskLevel.displayName)")
-        print("Zero-Harm Güvenlik:       Aktif (Sistem kök yolları korumalı)")
+        print("Total Recoverable Space: \(ByteFormatter.format(plan.selectedEstimatedBytes))")
+        print("Maximum Risk Level:      \(plan.maxRiskLevel.rawValue)")
+        print("Zero-Harm Safety:        Active (system root paths protected)")
         if includeTrash {
-            print("Çöp Kutusu: \(trashItems.count) öğe (\(ByteFormatter.format(trashItems.reduce(0) { $0 + $1.sizeBytes }))) — kalıcı silme için ayrıca dahil edildi.")
+            print("Trash: \(trashItems.count) items (\(ByteFormatter.format(trashItems.reduce(0) { $0 + $1.sizeBytes }))) — included separately for permanent deletion.")
         }
         for item in plan.items where item.isSelected {
             print("  • \(item.name) — \(item.path) (\(item.sizeFormatted))")
         }
         
         if dryRun {
-            print("\n💡 Bilgi: Bu bir önizleme (Dry-Run) çalıştırmasıydı. Temizliği gerçekleştirmek için:")
+            print("\n💡 This was a dry run. To execute the cleanup:")
             print("   MacOptimizer clean --execute --yes")
         } else {
-            print("\n🚀 Onaylanan plan başlatılıyor...")
+            print("\n🚀 Starting the approved plan...")
             let confirmation = SafeOperationExecutor.confirm(plan)
             let result = await JunkCleanerService.shared.executeCleaningPlan(plan, confirmation: confirmation)
             if includeTrash {
                 let result = SafeOperationExecutor.emptyTrash(trashItems.map { URL(fileURLWithPath: $0.path) }, confirmation: confirmation)
-                print("Çöp Kutusu: silinen \(result.removedCount), atlanan \(result.skippedCount), boşalan \(ByteFormatter.format(result.bytesFreed)).")
+                print("Trash: removed \(result.removedCount), skipped \(result.skippedCount), freed \(ByteFormatter.format(result.bytesFreed)).")
             }
-            print("✨ Temizlik tamamlandı! \(ByteFormatter.format(result.totalFreedBytes)) alan başarıyla geri kazanıldı.")
+            print("✨ Cleanup complete! Recovered \(ByteFormatter.format(result.totalFreedBytes)).")
         }
     }
     
@@ -121,29 +121,42 @@ public struct CLICommandRunner {
         // TODO(TASK-009): share the bundle version with the SwiftPM executable target.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             ?? Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-            ?? "Bilinmiyor"
+            ?? "Unknown"
         print("MacOptimizer Pro v\(version)")
         print("Apache License 2.0 • https://github.com/Codifya/MacOptimizer")
     }
     
     private static func printHelp() {
         print("""
-        MacOptimizer Pro CLI Yardım & Kullanım Kılavuzu:
+        MacOptimizer Pro CLI Help & Usage:
+        CLI output is English only and does not use localization catalogs.
         
         Kullanım:
           MacOptimizer <komut> [seçenekler]
         
         Komutlar:
-          status           Anlık CPU, RAM, Termal Durum, Swap ve Disk telemetrisini yazdırır.
-          clean            Gereksiz dosya taraması yapar (Varsayılan: --dry-run).
-          clean --execute --yes  Planı yazdırıp onaylanan öğeleri Çöp Sepeti'ne taşır.
-          --include-trash       Çöp Kutusu öğelerini plana ekler (ek onay gerektirir).
-          version          Sürüm ve lisans bilgisini görüntüler.
-          help             Bu yardım menüsünü görüntüler.
+          status           Print current CPU, memory, thermal, swap, and disk telemetry.
+          clean            Scan for junk files (default: --dry-run).
+          clean --execute --yes  Print the plan and move approved items to Trash.
+          --include-trash       Include Trash items in the plan (requires extra confirmation).
+          version          Print version and license information.
+          help             Show this help menu.
         
         Örnekler:
           MacOptimizer status
           MacOptimizer clean --dry-run
         """)
+    }
+
+    private static func categoryName(_ category: JunkCategoryType) -> String {
+        switch category {
+        case .systemCache: "System and App Caches"
+        case .systemLogs: "System and Error Logs"
+        case .developerCache: "Developer and Build Caches"
+        case .browserCache: "Browser Caches"
+        case .trashBin: "Trash"
+        case .largeFiles: "Large and Old Files"
+        case .appLeftovers: "App Leftovers"
+        }
     }
 }

@@ -28,7 +28,7 @@ struct MacOptimizerApp: App {
         .commands {
             SidebarCommands()
             CommandGroup(replacing: .help) {
-                Button("MacOptimizer GitHub Deposu") {
+                Button(L10n.string("MacOptimizer GitHub Repository")) {
                     if let url = URL(string: "https://github.com/Codifya/MacOptimizer") {
                         NSWorkspace.shared.open(url)
                     }
@@ -73,7 +73,7 @@ struct MenuBarView: View {
             // 1. RAM Metric Row
             VStack(spacing: 4) {
                 HStack {
-                    Text("RAM Bellek")
+                    Text(l10n: "RAM")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                     
@@ -90,7 +90,7 @@ struct MenuBarView: View {
             // 2. CPU Metric Row
             VStack(spacing: 4) {
                 HStack {
-                    Text("İşlemci (CPU)")
+                    Text(l10n: "Processor (CPU)")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                     
@@ -106,7 +106,7 @@ struct MenuBarView: View {
             
             // 3. Disk Metric Row
             HStack {
-                Text("Boş Disk:")
+                Text(l10n: "Free Disk:")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 
@@ -121,7 +121,7 @@ struct MenuBarView: View {
             
             // App controls
             HStack(spacing: 8) {
-                Button("Ana Paneli Aç") {
+                Button(L10n.string("Open Main Window")) {
                     NSApp.activate(ignoringOtherApps: true)
                 }
                 .buttonStyle(.plain)
@@ -140,14 +140,14 @@ struct MenuBarView: View {
                     Circle()
                         .fill(appState.autonomousConfig.isWatchdogActive ? Color.green : Color.gray)
                         .frame(width: 6, height: 6)
-                    Text(appState.autonomousConfig.isWatchdogActive ? "Otonom Koruma Aktif" : "Otonom Kapalı")
+                    Text(l10n: appState.autonomousConfig.isWatchdogActive ? "Autonomous Protection Active" : "Autonomous Protection Off")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                Button("Çıkış") {
+                Button(L10n.string("Quit")) {
                     NSApplication.shared.terminate(nil)
                 }
                 .buttonStyle(.plain)

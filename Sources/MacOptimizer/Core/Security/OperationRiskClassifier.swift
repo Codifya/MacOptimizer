@@ -10,11 +10,11 @@ public enum OperationRisk: String, Comparable, CaseIterable, Sendable, Codable {
     
     public var displayName: String {
         switch self {
-        case .safe: return "Güvenli (Salt Okunur)"
-        case .low: return "Düşük Risk"
-        case .medium: return "Orta Risk"
-        case .destructive: return "Yüksek Risk (Geri Alınamaz)"
-        case .forbidden: return "YASAKLI (Sistem Koruması)"
+        case .safe: return L10n.string("Safe (Read-Only)", table: .services)
+        case .low: return L10n.string("Low Risk", table: .services)
+        case .medium: return L10n.string("Medium Risk", table: .services)
+        case .destructive: return L10n.string("High Risk (Irreversible)", table: .services)
+        case .forbidden: return L10n.string("FORBIDDEN (System Protection)", table: .services)
         }
     }
     

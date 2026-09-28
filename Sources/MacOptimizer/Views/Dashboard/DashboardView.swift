@@ -212,7 +212,7 @@ public struct DashboardView: View {
             LiveTopProcessesCard(
                 metrics: appState.metrics,
                 onKill: { pid in
-                    appState.killProcess(pid: pid)
+                    appState.requestProcessTermination(pid: pid)
                 },
                 onNavigateToMemory: {
                     appState.selectedTab = .memory

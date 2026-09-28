@@ -108,3 +108,7 @@
 "NVIDIA NIM API key is missing." = "NVIDIA NIM API Anahtarı eksik.";
 "Invalid /chat/completions URL format." = "Geçersiz /chat/completions URL formatı.";
 "Could not parse the API response." = "API yanıtı ayrıştırılamadı.";
+"I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps." = "Mac'inizin bellek durumunu inceledim. Bellek baskısını azaltmak için en yoğun uygulamaları kapatmayı deneyebilirsiniz.";
+"Mac model: %@ (%@), macOS version: %@" = "Mac modeli: %@ (%@), macOS sürümü: %@";
+"RAM: %lld%%" = "RAM: %%%lld";
+"CPU: %@%%, Free disk: %lld%%" = "CPU: %%%@, Boş disk: %%%lld";

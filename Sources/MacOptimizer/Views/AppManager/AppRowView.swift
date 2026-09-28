@@ -23,11 +23,11 @@ public struct AppRowView: View {
                     MetricBadge(text: app.architecture.shortName, colorName: app.architecture.badgeColor)
                     
                     if app.isSystemApp {
-                        MetricBadge(text: "Sistem", colorName: "gray")
+                        MetricBadge(text: L10n.string("System", table: .cleanup), colorName: "gray")
                     }
                     
                     if app.updateInfo.hasUpdate {
-                        MetricBadge(text: "Güncelleme: v\(app.updateInfo.latestVersion)", colorName: "orange")
+                        MetricBadge(text: L10n.string("Update: v%@", table: .cleanup, app.updateInfo.latestVersion), colorName: "orange")
                     }
                 }
                 
@@ -61,7 +61,7 @@ public struct AppRowView: View {
                     Button(action: onUpdate) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.circle.fill")
-                            Text("Güncelle")
+                            Text(l10n: "Update", table: .cleanup)
                         }
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.white)
@@ -81,13 +81,13 @@ public struct AppRowView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Finder'da Göster")
+                .help(L10n.string("Show in Finder", table: .cleanup))
                 
                 if !app.isSystemApp {
                     Button(action: onInspectUninstall) {
                         HStack(spacing: 4) {
                             Image(systemName: "trash")
-                            Text("Kaldır")
+                            Text(l10n: "Uninstall", table: .cleanup)
                         }
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.red)
@@ -97,7 +97,7 @@ public struct AppRowView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
-                    .help("Kalıntılarıyla Birlikte Kaldır")
+                    .help(L10n.string("Uninstall Along with Leftovers", table: .cleanup))
                 }
             }
             .frame(minWidth: 90, alignment: .trailing)

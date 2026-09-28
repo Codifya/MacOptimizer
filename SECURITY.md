@@ -1,66 +1,103 @@
-# 🛡️ Security Policy & Zero-Harm Architecture
+# Security Policy
 
-MacOptimizer is designed from the ground up as a **security-first, defense-in-depth macOS system health and optimization toolkit**. We believe that any software interacting with system resources, memory, and storage must adhere to the highest standard of safety, transparency, and auditability.
+MacOptimizer Pro deletes files, terminates processes and runs system commands, so its safety
+rules matter. This document describes what the code actually enforces and how to report a
+problem.
 
----
+## Supported versions
 
-## 🔒 Zero-Harm Architecture (Defense-in-Depth)
+| Version | Status |
+| --- | --- |
+| 3.1.0 and later | Supported. v3.1.0 is being prepared and will be the first Developer ID-signed and notarized release. |
+| 2.1.0 – 3.0.0 | **Not safe. Do not use.** These releases contain known safety defects: a command injection in the update screen, and deletion paths that skipped the preview and confirmation. They were ad-hoc signed and not notarized. |
 
-MacOptimizer enforces multiple layers of validation before any filesystem, process, or maintenance action is executed:
+## Deletion pipeline
 
-```mermaid
-graph TD
-    Trigger["Action Proposal (User or AI)"] --> Risk["OperationRiskClassifier"]
-    Risk --> Policy["SafetyPolicyEngine"]
-    Policy --> Symlink["Symlink & Path Canonicalization"]
-    Symlink --> DryRun["Dry-Run Preview (CleaningPlan)"]
-    DryRun --> UserConfirm["Explicit User Confirmation"]
-    UserConfirm --> SafeExec["SafeOperationExecutor (Atomic & Trash-Protected)"]
-    SafeExec --> Audit["Encrypted/WAL Audit Log (SQLite)"]
-```
+Every file removal in the app and the CLI goes through `SafeOperationExecutor`:
 
-### 1. Strict Path Protection & Anti-Data Loss
-* **System Roots Protection**: Hardcoded boundaries preventing any deletion or write inside `/`, `/System`, `/System/Applications`, `/System/Library`, `/Library`, `/usr`, `/bin`, `/sbin`, `/var`, `/etc`, `/dev`, `/private`, `/Volumes`, `/cores`, `/opt`.
-* **User Data Protection**: Strict guards around user root directories (`~`, `~/Desktop`, `~/Documents`, `~/Downloads`, `~/Movies`, `~/Music`, `~/Pictures`, `~/Library`, `~/Library/Keychains`, `~/Library/Mail`, `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.config`).
-* **Symlink Attack Resistance**: All paths are resolved to their canonical destination using `URL.resolvingSymlinksInPath()` prior to evaluating safety policies, neutralizing symlink-based traversal attacks.
-* **Safe Removal Fallback**: Non-cache items are moved to the user's macOS Trash (`FileManager.trashItem`) rather than being unlinked directly.
+1. **Plan and preview.** Scans produce a `CleaningPlan`. Paths are canonicalised with
+   `URL.resolvingSymlinksInPath()` and classified by `OperationRiskClassifier`; forbidden paths
+   are never added. The plan is shown before anything is removed. The CLI prints it and needs
+   `--execute --yes`.
+2. **Confirmation is enforced.** `SafetyPolicyEngine` returns `allowed`, `requiresConfirmation` or
+   `denied`. The executor throws when a `requiresConfirmation` decision arrives without a
+   confirmation, and always refuses `denied`.
+3. **Re-validation.** Right before acting, the executor resolves the path again and stops if it
+   no longer resolves to the validated location or has become forbidden.
+4. **Trash by default.** The app's cleaners move items to the Trash. The executor permits
+   permanent removal only inside approved cache and log folders (for example
+   `~/Library/Caches/`, `~/Library/Logs/`, Xcode DerivedData, npm/Yarn/Cargo/Gradle/pip caches).
+5. **Emptying the Trash** is a separate, permanent action with its own confirmation (in the CLI,
+   `--include-trash`). It removes only entries directly inside `~/.Trash` and never follows
+   symlinks to their targets.
 
-### 2. Process Termination Protection (Anti-Kernel Panic)
-* **Kernel & Init Guards**: Hard protection for PID 0 (`kernel_task`), PID 1 (`launchd`), and MacOptimizer's own process.
-* **macOS System Daemons Whitelist**: 35+ critical background processes (`WindowServer`, `loginwindow`, `diskarbitrationd`, `securityd`, `opendirectoryd`, `coreauthd`, `syspolicyd`, `tccd`, `trustd`, `Dock`, `Finder`, `SystemUIServer`, `ControlCenter`, `mds`, `powerd`, etc.) cannot be killed under any circumstances.
+### Protected paths
 
-### 3. Sandboxed Command Execution
-* No arbitrary shell string execution (`/bin/sh` or `/bin/zsh`).
-* Whitelisted binaries only (`ApprovedExecutable`: `dscacheutil`, `killall`, `mdutil`, `qlmanage`).
-* 15-second watchdog timer automatically terminates hanging child processes.
+`PathProtectionPolicy` forbids:
 
-### 4. Secret & API Key Management
-* Cloud AI credentials (e.g. NVIDIA NIM API keys, custom tokens) are stored exclusively in the **macOS Keychain** (`Security.framework` with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`).
-* Secrets are never logged, never saved in plaintext `UserDefaults`, and excluded from bug reports.
+- system locations: `/`, `/System`, `/Library` (except `/Library/Caches/` and
+  `/Library/Logs/DiagnosticReports/`), `/usr`, `/bin`, `/sbin`, `/var`, `/etc`, `/dev`,
+  `/private`, `/Volumes`, `/cores`, `/opt`, and `/Users` outside your own home folder;
+- in your home folder: the folder itself, Desktop, Documents, Downloads, Movies, Music, Pictures,
+  Applications, `Library`, `Library/Application Support`, `Library/Keychains`, `Library/Mail`,
+  `Library/Messages`, `Library/Photos`, `Library/Safari`, `Library/Preferences`,
+  `Library/Containers`, `Library/Group Containers`, `Library/LaunchAgents`,
+  `Library/Mobile Documents`, shell and Git configuration files, and everything under `.ssh`,
+  `.gnupg`, `.aws`, `.config` and `.git`.
 
----
+The exact lists are in `Sources/MacOptimizer/Core/Security/PathProtectionPolicy.swift`.
 
-## 🎯 STRIDE Threat Model
+## Process termination
 
-| Threat Category | Potential Attack Vector | Mitigation in MacOptimizer |
-| :--- | :--- | :--- |
-| **Spoofing** | Rogue processes impersonating legitimate apps | Binary Mach-O header verification and code signing check. |
-| **Tampering** | Symlinks pointing from cache dirs to user documents | `URL.resolvingSymlinksInPath()` canonical path verification. |
-| **Repudiation** | Unverified file or process actions | Strict audit logging in WAL-mode SQLite database. |
-| **Information Disclosure** | Cloud AI exfiltrating private files | System prompts only include anonymous hardware counters. System data never leaves device without explicit user action. |
-| **Denial of Service** | Purging active system memory or killing WindowServer | `ProcessProtectionPolicy` and safe memory clamped limits (`64 MB - 256 MB`). |
-| **Elevation of Privilege** | Sudo escalation via unapproved commands | `SandboxedCommandRunner` strictly whitelists safe macOS utilities without root requirements. |
+Force-quitting from the Memory screen and terminating a process suggested by the AI assistant
+ask for confirmation first. The quit button in the dashboard's top-process card sends a normal
+quit request (the app's terminate, or SIGTERM) without a separate prompt. PID 0 (`kernel_task`), PID 1
+(`launchd`), the app's own process, a list of about 40 system processes (`WindowServer`,
+`loginwindow`, `securityd`, `tccd`, `Dock`, `Finder`, `mds`, `powerd`, …) and executables under
+`/System/Library/CoreServices/`, `/usr/libexec/` and `/System/Library/Frameworks/` cannot be
+terminated. The watchdog never terminates processes on its own.
 
----
+## Command execution
 
-## 🚨 Reporting a Vulnerability
+- There is no shell execution (`/bin/sh -c`, `zsh -c`) anywhere in the app.
+- System tools run through `SandboxedCommandRunner`, which accepts only an allow-list of absolute
+  executable paths (`dscacheutil`, `killall`, `mdutil`, `qlmanage`, `lsregister`, `atsutil`,
+  `launchctl`, `csrutil`, `spctl`, `defaults`, `socketfilterfw`), drops arguments that contain
+  `;`, `|`, `&`, `` ` `` or `$`, and times out after 15 seconds by default.
+- `/bin/ps`, `/bin/kill` and `brew` run as a fixed executable with an argument array. Homebrew
+  upgrades accept only a validated cask token (`[a-z0-9@._+-]`); data from remote appcasts is
+  never used as a command. Links from appcasts are opened only for `http` and `https` URLs.
+- All child processes go through `ProcessExecutor`: output is drained while the child runs and
+  capped, and a timed-out child gets SIGTERM and then SIGKILL.
 
-We welcome responsible security disclosures. If you discover a security vulnerability in MacOptimizer:
+## Secrets
 
-1. **Do NOT open a public GitHub issue.**
-2. Send a detailed report via email to: **security@osmancagrigenc.dev** (or submit via [GitHub Private Vulnerability Reporting](https://github.com/osmancagrigenc/MacOsOptimizer/security/advisories/new)).
-3. Include:
-   * Description of the vulnerability and affected versions.
-   * Step-by-step reproduction steps or proof-of-concept.
-   * Potential impact.
-4. We will acknowledge receipt within 48 hours and provide an estimated remediation timeline.
+The NVIDIA NIM API key is stored in the macOS Keychain
+(`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). The copy of the AI configuration kept in
+UserDefaults has an empty key field. A key saved in UserDefaults by an older version is migrated
+to the Keychain.
+
+## Threat model summary
+
+| Threat | Mitigation in the code | Limits |
+| --- | --- | --- |
+| Deleting the wrong files | Path policy, plan preview, enforced confirmation, Trash by default | The Trash itself is emptied permanently when you confirm it |
+| Symlink swaps between check and use | Canonicalisation, then re-validation right before acting | A narrow race between the last check and the file operation remains |
+| Command injection | No shell; allow-listed executables; argument filtering; validated Homebrew tokens | — |
+| Killing critical processes | PID and name/path protection lists; confirmation for force quit and AI suggestions | Name lists are maintained by hand |
+| Data sent to the cloud | NVIDIA NIM is off by default and needs a disclosure; app names need a separate opt-in | See [PRIVACY.md](PRIVACY.md) for exactly what is sent |
+| Tampered downloads | From v3.1.0: Developer ID signature and notarization (in preparation), plus GitHub build-provenance attestation | Releases up to v3.0.0 were not notarized |
+
+The app is not sandboxed and has no privileged helper. It runs with your user's permissions only.
+There is no audit log of file operations; the History screen lists completed operations from
+UserDefaults.
+
+## Reporting a vulnerability
+
+Please do not open a public issue for security problems.
+
+1. Email **security@osmancagrigenc.dev** with a description, the affected version, steps to
+   reproduce and the impact you expect.
+2. We aim to acknowledge reports within 48 hours and to agree on a fix timeline with you.
+
+Repository: https://github.com/Codifya/MacOptimizer

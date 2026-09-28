@@ -1,138 +1,161 @@
-# ⚡ MacOptimizer Pro
+# MacOptimizer Pro
 
-> **Safety notice:** Releases [v2.1.0–v3.0.0](https://github.com/Codifya/MacOptimizer/releases) contain known safety defects. Do not use these releases. A fixed, signed release is in progress.
+> **Safety notice:** Releases [v2.1.0–v3.0.0](https://github.com/Codifya/MacOptimizer/releases) contain known safety defects. Do not use them; use v3.1.0 or later. v3.1.0 is being prepared now and will be the first Developer ID-signed and notarized release.
 
 <div align="center">
 
-![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B%20%28Sonoma%2FSequoia%29-blue?logo=apple&style=flat-square)
-![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange?logo=swift&style=flat-square)
-![Architecture](https://img.shields.io/badge/Architecture-Apple%20Silicon%20%7C%20Intel-purple?style=flat-square)
+![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple&style=flat-square)
+![Swift 6](https://img.shields.io/badge/Swift-6-orange?logo=swift&style=flat-square)
 ![License](https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square)
-![Security](https://img.shields.io/badge/Security-Zero--Harm%20Engine-red?logo=apple&style=flat-square)
-![Tests](https://img.shields.io/badge/Tests-36%20Suites%20%7C%20200%2B%20Passed-success?style=flat-square)
 
-**Security-First, Open-Source, Native macOS System Health & Optimization Toolkit**
+**An open-source, native macOS system health and cleanup utility written in Swift and SwiftUI.**
 
-[Features](#-key-features) • [Zero-Harm Architecture](#-zero-harm-architecture) • [AI Platform](#-multi-provider-ai-platform) • [CLI Companion](#-headless-cli-companion) • [Benchmarks](#-performance-benchmarks) • [Installation](#-installation) • [Contributing](#-contributing)
+[Features](#features) • [How deletion works](#how-deletion-works) • [AI assistant](#ai-assistant) • [Command line](#command-line) • [Installation](#installation) • [Contributing](#contributing)
 
 </div>
 
 ---
 
-## 📖 Overview
+## Overview
 
-**MacOptimizer Pro** is an open-source, enterprise-grade system health, telemetry, and optimization toolkit crafted exclusively for macOS. Built purely in **Swift 6** with **SwiftUI**, native **Darwin Mach Kernel APIs**, and **IOKit**, it delivers microsecond-level hardware telemetry, autonomous watchdog protection, and memory optimization without the bloat, battery drain, or questionable security practices of traditional cleaners.
+MacOptimizer Pro shows live system health (memory, swap, CPU, thermal state, disk, battery and
+network), finds caches and other junk, uninstalls apps with their leftovers, finds duplicate files,
+manages launch items and runs a few maintenance commands. It is a single SwiftPM package with no
+third-party dependencies, and it reads system state through Darwin/Mach (`host_statistics64`,
+`sysctl`, `getifaddrs`) and IOKit.
 
----
+The app is not sandboxed, because it needs to read and clean files across your home folder. It
+is therefore distributed outside the Mac App Store.
 
-## ✨ Key Features
+## Features
 
-* 📊 **Low-Overhead Telemetry**: Direct Darwin Mach kernel inspection (`host_statistics64`, `sysctlbyname`) for memory pressure, swap usage, CPU load, thermal throttling, and battery health with near-zero CPU footprint.
-* 🛡️ **Zero-Harm Defense-in-Depth**: Modular safety policy engine preventing accidental file deletion, symlink traversal attacks, and macOS system daemon termination.
-* 🔍 **Two-Phase Dry-Run Cleaning**: Scans caches, developer build leftovers (Xcode `DerivedData`, CocoaPods, NPM, Yarn, Cargo, UV, Poetry, Homebrew), browser caches, and orphan app directories with complete preview and byte estimation before execution.
-* 📑 **High-Speed SHA-256 Duplicate Finder**: Cryptographic hash clustering to detect identical duplicate files across Downloads, Documents, and Pictures with original file preservation.
-* 🔒 **Security & Privacy Posture Audit**: Live auditing of System Integrity Protection (SIP), Gatekeeper code-signing, Application Firewall state, and TCC permissions with 0–100 hardening score.
-* 🌐 **Real-time Network Throughput**: Microsecond `getifaddrs` bandwidth monitoring displaying live download/upload speeds and local IP configuration.
-* 🔋 **Deep Battery Health & Thermals**: IOKit AppleSmartBattery inspection measuring cycle count, true health percentage, battery temperature (°C), and overheating alerts (>38°C).
-* 💻 **Headless Terminal CLI Companion**: First-class command-line runner (`MacOptimizer status`, `clean --dry-run`, `purge-ram`).
-* 🚀 **Microsecond Binary Architecture Parser**: Direct Mach-O binary header inspection to distinguish Apple Silicon (ARM64), Universal, and Intel (x86_64) binaries without slow subprocess calls.
-* 🤖 **Multi-Provider AI Copilot**: Decoupled AI diagnostic engine supporting **100% Offline Heuristics**, **Local Ollama LLMs**, and **Enterprise Cloud NIM** (Llama 3.3, DeepSeek R1).
-* 🐕 **7/24 Autonomous Watchdog**: Background watchdog that detects memory spikes, swap exhaustion, thermal throttling, and runaway processes with auto-healing.
-* 🔐 **Keychain Secret Storage**: Encrypted credential storage via native macOS `Security.framework`.
-* 📱 **Liquid Glass Responsive UI**: Adaptive layouts scaling smoothly from 13" MacBook Airs up to 5K Studio Displays, MenuBar Extra popover, and Split View.
+- **Live telemetry**: memory and memory pressure, swap, CPU load, thermal state, disk space,
+  battery (charge, cycle count, health, temperature) and network throughput. Sampling slows down
+  when the window is hidden (see [docs/PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)).
+- **History**: one telemetry sample per minute is stored in a local SQLite database, kept for
+  48 hours and charted for the last 1, 24 or 48 hours. A list of completed operations (the last
+  500) is kept in the app's preferences (UserDefaults).
+- **Junk cleaner**: scans user caches, logs, browser caches, developer caches (Xcode DerivedData,
+  Archives and device support, simulator caches, npm, Yarn, Cargo, Gradle, pip, CocoaPods,
+  Homebrew, uv, Poetry), large files and app leftovers. You review a cleaning plan before
+  anything is removed.
+- **App uninstaller**: moves an app and the leftovers you select to the Trash. Leftovers are not
+  selected by default. Apple system apps are refused.
+- **Duplicate finder**: looks in Downloads, Documents, Pictures or Desktop and groups files by
+  size, then by their first 64 KB, then by a full SHA-256 hash. Duplicates you select go to the
+  Trash.
+- **Startup items**: lists launch agents and daemons (in `~/Library` and `/Library`), enables or
+  disables them with `launchctl`, and can move user items to the Trash.
+- **App updates**: checks the Sparkle appcasts of installed apps, `brew outdated --cask` and the
+  VS Code update API. Homebrew casks are upgraded by running `brew` directly, never through a
+  shell.
+- **Maintenance**: flush the DNS cache, reset the QuickLook cache, rebuild LaunchServices, restart
+  CoreAudio, reindex Spotlight and clear the clipboard. Each command reports its real exit
+  status. Some of them need administrator rights and report a failure without them.
+- **Security overview**: reads the state of System Integrity Protection (`csrutil`), Gatekeeper
+  (`spctl`), the application firewall (`socketfilterfw`) and whether the app has Accessibility
+  permission, and turns them into a 0–100 score. A state that cannot be read earns no points.
+- **Watchdog**: while the app is running (also with its window closed), it checks for high memory
+  use, processes that stay above a CPU threshold, thermal throttling, more than 2 GB of swap and
+  less than 10 GB of free disk, and can send a notification. It only raises alerts and never
+  terminates anything by itself. It stops when you quit the app.
+- **Process list**: shows the top processes and can quit or force-quit user processes (force
+  quit asks for confirmation). PID 0 and 1, the app itself and about 40 named system processes
+  are always protected.
+- **Menu bar extra** with live memory, CPU, thermal and free-disk figures.
+- **Command line** mode for status and cleaning (see below).
+- **Languages**: English and Turkish. The app follows the macOS system language. The command line
+  is English only.
 
----
+## How deletion works
 
-## 🛡️ Zero-Harm Architecture
+Every file removal goes through one pipeline:
 
-MacOptimizer adheres to strict defense-in-depth principles:
+1. **Scan and plan.** A scan produces a `CleaningPlan`. Each path is resolved (including symlinks)
+   and classified by `OperationRiskClassifier`. Protected paths never enter the plan.
+2. **Preview.** The plan (items, sizes and risk) is shown for review. Nothing is removed yet.
+3. **Confirmation.** Removal needs an explicit confirmation. `SafeOperationExecutor` refuses an
+   operation that requires confirmation when none was given.
+4. **Execution.** `SafeOperationExecutor` re-checks each path right before acting and stops if it
+   changed after validation. Items are moved to the **Trash** by default. The executor allows
+   permanent removal only inside approved cache and log folders.
 
-```mermaid
-graph TD
-    UserAction["User / CLI / AI Trigger"] --> Risk["OperationRiskClassifier (.safe / .low / .medium / .destructive / .forbidden)"]
-    Risk --> Policy["SafetyPolicyEngine (Modular Security Rules)"]
-    Policy --> Symlink["Symlink & Path Canonicalization (resolvingSymlinksInPath)"]
-    Symlink --> DryRun["Dry-Run Preview (CleaningPlan)"]
-    DryRun --> Confirmation["User Explicit Confirmation / --execute"]
-    Confirmation --> Executor["SafeOperationExecutor (Atomic & Trash Fallback)"]
-    Executor --> Audit["Encrypted SQLite WAL Audit Trail"]
-```
+Emptying the Trash is a separate action. It deletes permanently and asks for its own
+confirmation. It removes Trash entries only, never the targets of symlinks inside the Trash.
 
-1. **System & User Path Protection**: Hard boundaries protecting system root directories (`/System`, `/Library`, `/usr`, `/private`) and essential user directories (`~`, `~/Desktop`, `~/Documents`, `~/Downloads`, `~/.ssh`, `~/.gnupg`, `~/Library/Keychains`).
-2. **Symlink Attack Resistance**: Canonicalizes all filesystem paths with `URL.resolvingSymlinksInPath()` before evaluating deletion permissions.
-3. **Anti-Kernel Panic Protection**: Blocks termination of PID 0 (`kernel_task`), PID 1 (`launchd`), and 35+ critical macOS daemons (`WindowServer`, `loginwindow`, `securityd`, `opendirectoryd`, `tccd`, `Dock`, `Finder`, etc.).
-4. **Sandboxed Command Execution**: Replaces raw shell execution with a strictly whitelisted runner (`dscacheutil`, `killall`, `mdutil`, `qlmanage`, `lsregister`, `csrutil`, `spctl`) with 15-second watchdog timers.
+Protected locations include system roots (`/System`, `/Library`, `/usr`, `/private`, …), your home
+folder itself, Desktop, Documents, Downloads, Movies, Music, Pictures, `~/Library/Keychains`,
+`~/Library/Mail`, `~/Library/Preferences`, `~/.ssh`, `~/.gnupg`, `~/.aws` and `~/.config`. See
+[SECURITY.md](SECURITY.md) for details.
 
----
+## AI assistant
 
-## 💻 Headless CLI Companion
+- **Default: local rules.** Built-in heuristics analyse the current metrics on your Mac, with no
+  network access.
+- **Optional: NVIDIA NIM (cloud).** Off by default. It needs your own API key, and the app shows a
+  disclosure that you must accept before the first request. Running app names are sent only if
+  you also turn on the separate "Include running app names" setting.
+- The API key is stored in the macOS Keychain.
+- Suggested actions (scan, clean, check updates, flush DNS, terminate a process) open the normal
+  screen or ask for confirmation. Cleaning always goes through the plan preview.
 
-MacOptimizer can be executed directly from Terminal without opening the GUI:
+[PRIVACY.md](PRIVACY.md) lists exactly what is sent and every other network request the app
+makes.
+
+## Command line
+
+The same binary runs headless when you pass it a command. Output is English only.
 
 ```bash
-# Print instantaneous CPU, RAM, Swap, Thermal & Battery telemetry:
-MacOptimizer status
-
-# Perform a safe Dry-Run junk scan:
-MacOptimizer clean --dry-run
-
-# Execute Zero-Harm cleaning:
-MacOptimizer clean --execute
-
-# Purge inactive RAM memory pages safely:
-MacOptimizer purge-ram
+MacOptimizer status                  # CPU, memory, swap, thermal, disk and battery
+MacOptimizer clean                   # scan and print the plan (dry run, the default)
+MacOptimizer clean --dry-run         # same as above
+MacOptimizer clean --execute --yes   # move the planned items to the Trash
+MacOptimizer clean --execute --yes --include-trash   # also permanently empty the Trash
+MacOptimizer version
+MacOptimizer help
 ```
 
----
+`--execute` without `--yes` is refused. The Trash is left alone unless you pass
+`--include-trash`.
 
-## 🤖 Multi-Provider AI Platform
+## Installation
 
-Choose the intelligence provider that matches your privacy and performance needs:
+### Download a release
 
-| Provider | Privacy & Network | Capabilities |
-| :--- | :--- | :--- |
-| **Local Heuristics** | 100% Offline • Zero Network | Instant rule-based memory, CPU bottleneck, and junk diagnosis. |
-| **Ollama Local** | 100% Offline • Localhost Only | On-device local LLM reasoning (Llama 3.2, DeepSeek-R1:8B) via `localhost:11434`. |
-| **NVIDIA NIM** | Cloud HTTPS API | Enterprise-scale diagnostic reasoning with Llama 3.3 70B and DeepSeek R1. |
-| **OpenAI-Compatible** | Custom Endpoint | Connect to your self-hosted vLLM, LM Studio, or OpenAI servers. |
+Signed and notarized DMGs start with **v3.1.0**, which is being prepared now. Earlier releases
+(v2.1.0–v3.0.0) were not notarized and contain known safety defects. Do not use them.
 
----
+### Build from source
 
-## 🏎️ Performance Benchmarks
+You need macOS 14 or later and a Swift 6 toolchain (Xcode 16 or later; CI uses Xcode 16.4).
 
-*Tested on MacBook Pro 14" (Apple M4 Pro, 24 GB RAM, macOS 15.0)*:
-
-* **Mach-O Header Detection**: **0.04 ms** (vs ~4.8 ms with `lipo` — **~120x faster**).
-* **Mach VM Telemetry Read**: **< 0.02 ms** (vs ~45 ms with `ps` / `top`).
-* **Multi-Category Parallel Scan**: **0.42 s** for 50,000 files using Swift `TaskGroup`.
-* **SHA-256 Duplicate Streaming**: **1.2 GB/s** using Apple CryptoKit streaming.
-* **Watchdog Background CPU Load**: **~0.01%** (zero impact on battery life).
-
-For full benchmark specifications, see [BENCHMARKS.md](BENCHMARKS.md).
-
----
-
-## 📥 Installation
-
-### Option 1: Download Release
-Download the notarized `MacOptimizer.dmg` from the [Releases](https://github.com/Codifya/MacOptimizer/releases) page and drag it to `/Applications`.
-
-### Option 2: Build from Source
 ```bash
-# Clone the repository
 git clone https://github.com/Codifya/MacOptimizer.git
 cd MacOptimizer
 
-# Run unit tests (36 suites / 200+ assertions)
-swift test
-
-# Build release .app bundle
-./Scripts/build_app.sh
+swift test               # run the test suite
+./Scripts/build_app.sh   # build MacOptimizer.app (unsigned)
 ```
 
----
+The test suite has 87 XCTest test methods. It is hermetic: tests use temporary directories, a
+fake home folder, injected command runners and a throwaway Keychain item, so running them does
+not change your Mac. CI runs the whole suite on every pull request.
 
-## 📄 License
+## Documentation
 
-MacOptimizer is released under the [Apache License 2.0](LICENSE).
-Created and maintained with ❤️ by [Codifya](https://github.com/Codifya).
+- [ARCHITECTURE.md](ARCHITECTURE.md): how the code is organised
+- [SECURITY.md](SECURITY.md): safety model and how to report a vulnerability
+- [PRIVACY.md](PRIVACY.md): what stays on your Mac and what is sent over the network
+- [CHANGELOG.md](CHANGELOG.md) and [ROADMAP.md](ROADMAP.md)
+- [BENCHMARKS.md](BENCHMARKS.md) and [docs/PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)
+- [docs/LOCALIZATION.md](docs/LOCALIZATION.md): adding or changing translations
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MacOptimizer Pro is released under the [Apache License 2.0](LICENSE).
+Maintained by [Codifya](https://github.com/Codifya).

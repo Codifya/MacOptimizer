@@ -20,7 +20,7 @@ public struct AppUninstallerDetailView: View {
                     .frame(width: 48, height: 48)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(app.name) Kaldırılıyor")
+                    Text(L10n.string("Uninstalling %@", table: .cleanup, app.name))
                         .font(.system(size: 16, weight: .bold))
                     
                     Text("v\(app.version) • \(app.bundleIdentifier)")
@@ -30,7 +30,7 @@ public struct AppUninstallerDetailView: View {
                 
                 Spacer()
                 
-                Button("Kapat") {
+                Button(L10n.string("Close", table: .cleanup)) {
                     onDismiss()
                 }
                 .buttonStyle(.plain)
@@ -44,7 +44,7 @@ public struct AppUninstallerDetailView: View {
             if appState.isLoadingAppFiles {
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("İlişkili dosyalar ve önbellekler aranıyor...")
+                    Text(l10n: "Searching for related files and caches...", table: .cleanup)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
@@ -52,12 +52,12 @@ public struct AppUninstallerDetailView: View {
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("Bulunan İlişkili Dosyalar (\(appState.selectedAppFiles.count) öğe)")
+                        Text(L10n.string("Related Files Found (%lld items)", table: .cleanup, appState.selectedAppFiles.count))
                             .font(.system(size: 13, weight: .semibold))
                         
                         Spacer()
                         
-                        Text("Kazanılacak Alan: \(ByteFormatter.format(totalSizeBytes))")
+                        Text(L10n.string("Space to Reclaim: %@", table: .cleanup, ByteFormatter.format(totalSizeBytes)))
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.red)
                     }
@@ -117,7 +117,7 @@ public struct AppUninstallerDetailView: View {
             
             // Actions
             HStack {
-                Button("Vazgeç") {
+                Button(L10n.string("Cancel", table: .cleanup)) {
                     onDismiss()
                 }
                 .buttonStyle(.plain)
@@ -126,7 +126,7 @@ public struct AppUninstallerDetailView: View {
                 Spacer()
                 
                 ActionButton(
-                    title: appState.isUninstalling ? "Kaldırılıyor..." : "Tümünü Sil ve Kaldır (\(ByteFormatter.format(totalSizeBytes)))",
+                    title: appState.isUninstalling ? L10n.string("Uninstalling...", table: .cleanup) : L10n.string("Delete All and Uninstall (%@)", table: .cleanup, ByteFormatter.format(totalSizeBytes)),
                     iconName: "trash.fill",
                     gradient: SystemTheme.dangerGradient,
                     isLoading: appState.isUninstalling
@@ -141,13 +141,13 @@ public struct AppUninstallerDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .alert(isPresented: $showConfirmAlert) {
             Alert(
-                title: Text("\(app.name) Uygulamasını Kaldır"),
-                message: Text("Uygulama paketi Çöp Sepetine taşınacak. Seçili kalıntılar da Çöp Sepetine taşınacaktır. Devam edilsin mi?"),
-                primaryButton: .destructive(Text("Kalıntılarıyla Kaldır")) {
+                title: Text(L10n.string("Uninstall %@", table: .cleanup, app.name)),
+                message: Text(l10n: "The app bundle will be moved to the Trash. Selected leftovers will also be moved to the Trash. Continue?", table: .cleanup),
+                primaryButton: .destructive(Text(l10n: "Uninstall with Leftovers", table: .cleanup)) {
                     appState.performUninstall()
                     onDismiss()
                 },
-                secondaryButton: .cancel(Text("Vazgeç"))
+                secondaryButton: .cancel(Text(l10n: "Cancel", table: .cleanup))
             )
         }
     }

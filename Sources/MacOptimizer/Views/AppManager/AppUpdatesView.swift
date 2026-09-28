@@ -43,17 +43,17 @@ public struct AppUpdatesView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Yazılım & Uygulama Güncellemeleri")
+                    Text(l10n: "Software & App Updates", table: .cleanup)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
                     if !appsWithUpdates.isEmpty {
-                        Text("\(appsWithUpdates.count) uygulama için yeni sürüm mevcut!")
+                        Text(L10n.string("New versions available for %lld apps!", table: .cleanup, appsWithUpdates.count))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.orange)
                             .lineLimit(1)
                     } else {
-                        Text("Yüklü macOS uygulamalarınızın en son sürümlerini kontrol edin.")
+                        Text(l10n: "Check for the latest versions of your installed macOS apps.", table: .cleanup)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -75,7 +75,7 @@ public struct AppUpdatesView: View {
                 Spacer(minLength: 12)
                 
                 ActionButton(
-                    title: appState.isCheckingUpdates ? "Denetleniyor..." : "Güncellemeleri Denetle",
+                    title: appState.isCheckingUpdates ? L10n.string("Checking...", table: .cleanup) : L10n.string("Check for Updates", table: .cleanup),
                     iconName: "arrow.triangle.2.circlepath",
                     gradient: SystemTheme.updateGradient,
                     isLoading: appState.isCheckingUpdates
@@ -108,7 +108,7 @@ public struct AppUpdatesView: View {
                             }
                             
                             HStack(spacing: 6) {
-                                Text("Mevcut: v\(app.version)")
+                                Text(L10n.string("Current: v%@", table: .cleanup, app.version))
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                                 
@@ -116,7 +116,7 @@ public struct AppUpdatesView: View {
                                     .font(.system(size: 9))
                                     .foregroundColor(.secondary)
                                 
-                                Text("Yeni: v\(app.updateInfo.latestVersion)")
+                                Text(L10n.string("New: v%@", table: .cleanup, app.updateInfo.latestVersion))
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.green)
                             }
@@ -126,7 +126,7 @@ public struct AppUpdatesView: View {
                         
                         HStack(spacing: 8) {
                             if !app.updateInfo.releaseNotesURL.isEmpty, let url = URL(string: app.updateInfo.releaseNotesURL) {
-                                Button("Sürüm Notları") {
+                                Button(L10n.string("Release Notes", table: .cleanup)) {
                                     NSWorkspace.shared.open(url)
                                 }
                                 .buttonStyle(.plain)
@@ -139,7 +139,7 @@ public struct AppUpdatesView: View {
                                     if app.updateInfo.updateSource == .homebrew {
                                         // Only Homebrew-sourced entries may run brew, and only with a validated token.
                                         if let token = AppUpdateCheckerService.caskToken(fromUpgradeCommand: app.updateInfo.downloadURL) {
-                                            appState.showNotification(message: "\(app.name) Homebrew üzerinden güncelleniyor.")
+                                            appState.showNotification(message: L10n.string("Updating %@ via Homebrew.", table: .cleanup, app.name))
                                             Task {
                                                 let result = await AppUpdateCheckerService.shared.upgradeHomebrewCask(token: token)
                                                 appState.showNotification(message: result.message)
@@ -152,7 +152,7 @@ public struct AppUpdatesView: View {
                                 } label: {
                                     HStack(spacing: 4) {
                                         Image(systemName: "arrow.down.circle.fill")
-                                        Text("Güncellemeyi Al")
+                                        Text(l10n: "Get Update", table: .cleanup)
                                     }
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(.white)
@@ -178,10 +178,10 @@ public struct AppUpdatesView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(SystemTheme.memoryGradient)
                 
-                Text("Tüm Uygulamalarınız Güncel")
+                Text(l10n: "All Your Apps Are Up to Date", table: .cleanup)
                     .font(.system(size: 16, weight: .bold))
                 
-                Text("Herhangi bir bekleyen yazılım güncellemesi bulunamadı. Yeni sürümleri denetlemek için yukarıdaki butonu kullanabilirsiniz.")
+                Text(l10n: "No pending software updates were found. Use the button above to check for new versions.", table: .cleanup)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

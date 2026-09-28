@@ -1,50 +1,43 @@
-# 🗺️ MacOptimizer Pro Roadmap
+# Roadmap
 
-This roadmap outlines the past milestones and future evolution of MacOptimizer Pro toward version 3.0+.
+This roadmap lists what is done and what comes next. Items move to done only when they are
+merged and covered by the test suite or verified on macOS.
 
----
+## History
 
-## 🎯 Release Milestones
+v2.1.0 to v3.0.0 were published on 2026-08-28. They added the features the app still has
+(telemetry, junk cleaner, uninstaller, duplicate finder, startup items, update checks, security
+overview, watchdog, AI assistant, CLI), but a later audit found serious defects in them: a command
+injection in the update screen, deletion paths without preview or confirmation, results reported
+as successful when commands failed, and documentation that claimed more than the code did. Do not
+use those releases.
 
-### `v2.0 — Production Native Core (Completed)`
-- [x] Native SwiftUI Liquid Glass user interface.
-- [x] Darwin Mach kernel telemetry (`host_statistics64`, `sysctlbyname`).
-- [x] Microsecond-level binary Mach-O architecture detector.
-- [x] Concurrent multi-category junk scanner with `TaskGroup`.
-- [x] Deep app uninstaller & orphan cache detector.
-- [x] Sparkle RSS and Homebrew update checker.
-- [x] 7/24 Autonomous background watchdog.
-- [x] NVIDIA NIM cloud AI Copilot integration.
-- [x] Fully responsive layout for 13" laptops to 5K monitors.
+## v3.1.0 — Safety release (in progress)
 
----
+Done (merged to `main`):
 
-### `v2.1 — Security Hardening & Open Source Ready (Completed)`
-- [x] **Zero-Harm Policy Engine**: Modular `PathProtectionPolicy`, `ProcessProtectionPolicy`, `ApplicationProtectionPolicy`, and `LaunchItemProtectionPolicy`.
-- [x] **Symlink Traversal Attack Protection**: Path canonicalization using `URL.resolvingSymlinksInPath()`.
-- [x] **Operation Risk Classification**: `.safe`, `.low`, `.medium`, `.destructive`, and `.forbidden` classification.
-- [x] **Dry-Run Plan Engine**: `CleaningPlan` preview lifecycle before any disk modifications.
-- [x] **Keychain Secret Management**: Encrypted API key storage via macOS `Security.framework`.
-- [x] **Sandboxed Command Runner**: Whitelisted binaries only with 15s watchdog timeout.
-- [x] **Multi-Provider AI Platform**: Decoupled `AIProvider` supporting Local Heuristics, Ollama, NVIDIA NIM, and OpenAI endpoints.
-- [x] **Telemetry Store**: Embedded SQLite database with WAL mode for time-series metrics.
-- [x] **Massive Test Suite**: 23+ unit test suites with 120+ assertions passing.
-- [x] **Open Source Guidelines**: Apache-2.0 License, `SECURITY.md` with STRIDE model, `CONTRIBUTING.md`, `ARCHITECTURE.md`, and `PRIVACY.md`.
+- [x] Command injection removed: no shell execution; Homebrew runs directly with a validated token.
+- [x] One deletion pipeline: plan preview, enforced confirmation, re-validation, Trash by default.
+- [x] Honest results: real exit codes, RAM purge removed, security score without free points,
+      fixed battery health formula, no invented chart data.
+- [x] AI assistant: local heuristics by default; NVIDIA NIM only after a disclosure; app names
+      only with a separate opt-in; unused providers removed.
+- [x] Monitoring, process execution and scanner hardening (bounded memory, no pipe deadlocks,
+      cancellable parallel scans, telemetry history recorded).
+- [x] Hermetic test suite run in full by CI on macOS with Swift 6.
+- [x] English and Turkish localization, following the system language.
+- [x] Documentation aligned with the code.
 
----
+Remaining:
 
-### `v2.2 — Observability Charts & Advanced Telemetry (Upcoming)`
-- [ ] Swift Charts integration for 1h, 24h, 7d, and 30d historical telemetry graphs.
-- [ ] Thermal throttling and fan speed monitoring via IOKit.
-- [ ] Network bandwidth per-process monitor.
-- [ ] Disk IO read/write throughput metrics.
+- [ ] One version source for the app, the CLI and the release tag.
+- [ ] Developer ID signing, hardened runtime, notarization and stapling of the DMG.
 
----
+## Later (not scheduled)
 
-### `v3.0 — Production Distribution & Enterprise Pipeline (Target)`
-- [ ] Automated GitHub Actions release pipeline with Apple Developer ID code signing.
-- [ ] Apple Notarization via `xcrun notarytool` and ticket stapling.
-- [ ] Compressed DMG installer generation.
-- [ ] SPDX Software Bill of Materials (SBOM) generation.
-- [ ] GitHub Artifact Attestation for verifiable supply-chain security.
-- [ ] Modular plugin & custom automation rule engine.
+- Split `AppState` into smaller feature models and inject services.
+- Merge `Helpers/SafetyGuard` into the `Core/Security` policies.
+- App icon, and applying the menu bar extra setting.
+- Verify Homebrew update detection against current `brew` JSON output.
+- Instruments measurements for the figures still marked `REQUIRES_INSTRUMENTS_VALIDATION` in
+  [docs/PERFORMANCE_BASELINE.md](docs/PERFORMANCE_BASELINE.md).

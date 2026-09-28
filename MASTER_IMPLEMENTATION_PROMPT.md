@@ -1,3 +1,5 @@
+> **Historical document:** this is the original AI generation prompt for v3.0, kept for reference. It describes intended goals, not current behavior; see [README.md](README.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for what the code actually does.
+
 # 🚀 MASTER_IMPLEMENTATION_PROMPT: MacOptimizer Pro v3.0 Transformation
 
 > **Mission**: Transform MacOptimizer into an enterprise-grade, security-first, open-source **Native macOS System Health & Optimization Toolkit** governed by a **Zero-Harm Architecture (Defense-in-Depth)**.

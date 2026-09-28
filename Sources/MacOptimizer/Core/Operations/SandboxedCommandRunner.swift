@@ -37,9 +37,7 @@ public struct SandboxedCommandRunner: Sendable {
         timeoutSeconds: TimeInterval = 15.0
     ) async -> CommandExecutionResult {
         // Sanitize arguments to prevent injection
-        let sanitizedArgs = arguments.filter { arg in
-            !arg.contains(";") && !arg.contains("|") && !arg.contains("&") && !arg.contains("`") && !arg.contains("$")
-        }
+        let sanitizedArgs = sanitizedArguments(arguments)
         
         let output = await ProcessExecutor.run(
             executableURL: URL(fileURLWithPath: executable.rawValue),
@@ -53,5 +51,11 @@ public struct SandboxedCommandRunner: Sendable {
             stderr: output.exitCode == -1 ? "Çalıştırma hatası: \(output.standardError)" : output.standardError,
             durationMs: output.durationMs
         )
+    }
+
+    static func sanitizedArguments(_ arguments: [String]) -> [String] {
+        arguments.filter { arg in
+            !arg.contains(";") && !arg.contains("|") && !arg.contains("&") && !arg.contains("`") && !arg.contains("$")
+        }
     }
 }

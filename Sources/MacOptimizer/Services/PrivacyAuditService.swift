@@ -54,7 +54,16 @@ public struct SecurityAuditReport: Sendable, Equatable {
 public actor PrivacyAuditService {
     public static let shared = PrivacyAuditService()
     
-    public init() {}
+    private let commandRunner: MaintenanceService.CommandRunner
+    private let accessibilityChecker: @Sendable () -> Bool
+
+    public init(
+        commandRunner: @escaping MaintenanceService.CommandRunner = { executable, arguments in await SandboxedCommandRunner.run(executable: executable, arguments: arguments) },
+        accessibilityChecker: @escaping @Sendable () -> Bool = { AXIsProcessTrusted() }
+    ) {
+        self.commandRunner = commandRunner
+        self.accessibilityChecker = accessibilityChecker
+    }
     
     /// Performs a full macOS security & privacy posture evaluation
     public func runSecurityAudit() async -> SecurityAuditReport {
@@ -62,7 +71,7 @@ public actor PrivacyAuditService {
         let totalPossibleScore = 100
         
         // 1. System Integrity Protection (SIP) - 30 Puan
-        let sipRes = await SandboxedCommandRunner.run(executable: .csrutil, arguments: ["status"])
+        let sipRes = await commandRunner(.csrutil, ["status"])
         let isSIPEnabled = sipRes.isSuccess ? sipRes.stdout.localizedCaseInsensitiveContains("enabled") : nil
         if isSIPEnabled == true {
             items.append(SecurityPostureItem(
@@ -89,7 +98,7 @@ public actor PrivacyAuditService {
         }
         
         // 2. Gatekeeper (Uygulama İndirme & Kod İmza Doğrulama) - 25 Puan
-        let spctlRes = await SandboxedCommandRunner.run(executable: .spctl, arguments: ["--status"])
+        let spctlRes = await commandRunner(.spctl, ["--status"])
         let isGatekeeperEnabled: Bool? = spctlRes.isSuccess ? spctlRes.stdout.localizedCaseInsensitiveContains("assessments enabled") : nil
         if isGatekeeperEnabled == true {
             items.append(SecurityPostureItem(
@@ -116,7 +125,7 @@ public actor PrivacyAuditService {
         }
         
         // 3. macOS Güvenlik Duvarı (Firewall) - 25 Puan
-        let firewallRes = await SandboxedCommandRunner.run(executable: .socketfilterfw, arguments: ["--getglobalstate"])
+        let firewallRes = await commandRunner(.socketfilterfw, ["--getglobalstate"])
         let firewallText = firewallRes.stdout.lowercased()
         let isFirewallEnabled: Bool? = firewallRes.isSuccess
             ? (firewallText.contains("firewall is enabled") ? true : firewallText.contains("firewall is disabled") ? false : nil)
@@ -146,7 +155,7 @@ public actor PrivacyAuditService {
         }
         
         // 4. Erişilebilirlik & Güvenlik İzinleri (Accessibility / TCC) - 20 Puan
-        let isTrusted = AXIsProcessTrusted()
+        let isTrusted = accessibilityChecker()
         if isTrusted {
             items.append(SecurityPostureItem(
                 id: "accessibility",

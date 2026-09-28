@@ -81,8 +81,8 @@ public struct SafetyPolicyEngine: Sendable {
     }
     
     // MARK: - Convenience Checkers
-    public static func canDelete(path: String) -> Bool {
-        return evaluate(.removeFile(path: path)).isAllowed
+    public static func canDelete(path: String, homeDirectory: URL? = nil) -> Bool {
+        return evaluate(.removeFile(path: path), homeDirectory: homeDirectory).isAllowed
     }
     
     public static func canTerminateProcess(pid: Int32, name: String, path: String? = nil) -> Bool {

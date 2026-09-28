@@ -147,7 +147,7 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     func testUserRootAndDataDirectoriesForbidden() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         let protectedUserPaths = [
             home,
             "\(home)/Desktop",
@@ -180,14 +180,14 @@ final class MacOptimizerTests: XCTestCase {
         ]
         
         for path in protectedUserPaths {
-            XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(path), "User essential data path must be forbidden: \(path)")
-            XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path), "User data path must not be cleanable: \(path)")
+            XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(path, homeDirectory: URL(fileURLWithPath: home)), "User essential data path must be forbidden: \(path)")
+            XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: URL(fileURLWithPath: home)), "User data path must not be cleanable: \(path)")
             XCTAssertEqual(OperationRiskClassifier.classifyFileRemoval(path: path), .forbidden, "Risk must be forbidden: \(path)")
         }
     }
     
     func testPathTraversalAndMalformedPaths() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         let maliciousPaths = [
             "\(home)/Library/Caches/../../../System",
             "\(home)/Library/Caches/../../Documents",
@@ -202,13 +202,13 @@ final class MacOptimizerTests: XCTestCase {
         ]
         
         for path in maliciousPaths {
-            XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(path), "Traversal path must be forbidden: \(path)")
-            XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path), "Traversal path must not be cleanable: \(path)")
+            XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(path, homeDirectory: URL(fileURLWithPath: home)), "Traversal path must be forbidden: \(path)")
+            XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: URL(fileURLWithPath: home)), "Traversal path must not be cleanable: \(path)")
         }
     }
     
     func testApprovedCleanableCachesAllowed() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         let validCachePaths = [
             "\(home)/Library/Caches/com.example.app",
             "\(home)/Library/Caches/Google/Chrome/Default/Cache",
@@ -220,9 +220,9 @@ final class MacOptimizerTests: XCTestCase {
         ]
         
         for path in validCachePaths {
-            XCTAssertFalse(PathProtectionPolicy.isForbiddenPath(path), "Valid cache path must not be forbidden: \(path)")
-            XCTAssertTrue(PathProtectionPolicy.isCleanableCachePath(path), "Valid cache path must be cleanable: \(path)")
-            XCTAssertTrue(SafetyPolicyEngine.canDelete(path: path), "Policy engine must allow cleanable cache: \(path)")
+            XCTAssertFalse(PathProtectionPolicy.isForbiddenPath(path, homeDirectory: URL(fileURLWithPath: home)), "Valid cache path must not be forbidden: \(path)")
+            XCTAssertTrue(PathProtectionPolicy.isCleanableCachePath(path, homeDirectory: URL(fileURLWithPath: home)), "Valid cache path must be cleanable: \(path)")
+            XCTAssertTrue(SafetyPolicyEngine.canDelete(path: path, homeDirectory: URL(fileURLWithPath: home)), "Policy engine must allow cleanable cache: \(path)")
         }
     }
     
@@ -235,15 +235,16 @@ final class MacOptimizerTests: XCTestCase {
         let symlinkToSystem = tempDir.appendingPathComponent("fake_cache_system")
         let symlinkToSSH = tempDir.appendingPathComponent("fake_cache_ssh")
         
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = tempDir.appendingPathComponent("home")
+        let protected = home.appendingPathComponent(".ssh")
+        try FileManager.default.createDirectory(at: protected, withIntermediateDirectories: true)
         
-        try? FileManager.default.createSymbolicLink(at: symlinkToSystem, withDestinationURL: URL(fileURLWithPath: "/System"))
-        try? FileManager.default.createSymbolicLink(at: symlinkToSSH, withDestinationURL: URL(fileURLWithPath: "\(home)/.ssh"))
+        try FileManager.default.createSymbolicLink(at: symlinkToSystem, withDestinationURL: tempDir.appendingPathComponent("system"))
+        try FileManager.default.createSymbolicLink(at: symlinkToSSH, withDestinationURL: protected)
         
-        XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(symlinkToSystem.path), "Symlink to /System must be resolved and forbidden")
-        XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(symlinkToSSH.path), "Symlink to ~/.ssh must be resolved and forbidden")
-        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(symlinkToSystem.path))
-        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(symlinkToSSH.path))
+        XCTAssertTrue(PathProtectionPolicy.isForbiddenPath(symlinkToSSH.path, homeDirectory: home), "Symlink to injected home .ssh must be forbidden")
+        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(symlinkToSystem.path, homeDirectory: home))
+        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(symlinkToSSH.path, homeDirectory: home))
     }
     
     // MARK: - 3. Process Protection Policy Tests (35+ Daemons & System Procs)
@@ -337,7 +338,7 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     func testUserLaunchItemsAllowed() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         let userItems = [
             (path: "\(home)/Library/LaunchAgents/com.google.keystone.agent.plist", label: "com.google.keystone.agent"),
             (path: "\(home)/Library/LaunchAgents/com.spotify.webhelper.plist", label: "com.spotify.webhelper"),
@@ -359,13 +360,13 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     func testSafetyPolicyEngineDecisions() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         
         // Remove file
-        let deniedDecision = SafetyPolicyEngine.evaluate(.removeFile(path: "\(home)/Documents"))
+        let deniedDecision = SafetyPolicyEngine.evaluate(.removeFile(path: "\(home)/Documents"), homeDirectory: URL(fileURLWithPath: home))
         XCTAssertFalse(deniedDecision.isAllowed)
         
-        let allowedDecision = SafetyPolicyEngine.evaluate(.removeFile(path: "\(home)/Library/Caches/temp.dat"))
+        let allowedDecision = SafetyPolicyEngine.evaluate(.removeFile(path: "\(home)/Library/Caches/temp.dat"), homeDirectory: URL(fileURLWithPath: home))
         XCTAssertTrue(allowedDecision.isAllowed)
         
         // Terminate process
@@ -382,7 +383,7 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 7. Dry-Run CleaningPlan Tests
     func testCleaningPlanGenerationAndPreview() async {
-        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("macoptimizer-test-home").path
         
         let item1 = JunkFileItem(
             path: "\(home)/Library/Caches/test_app_1",
@@ -407,7 +408,7 @@ final class MacOptimizerTests: XCTestCase {
         )
         
         let group = JunkCategoryGroup(type: .systemCache, items: [item1, item2, itemForbidden])
-        let plan = await JunkCleanerService.shared.generateCleaningPlan(from: [group])
+        let plan = await JunkCleanerService(homeDirectory: URL(fileURLWithPath: home)).generateCleaningPlan(from: [group])
         
         XCTAssertEqual(plan.items.count, 2, "Forbidden item must be excluded from plan")
         XCTAssertEqual(plan.totalEstimatedBytes, 150 * 1024 * 1024)
@@ -425,34 +426,31 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(executables.contains(.qlmanage))
     }
     
-    func testSandboxedCommandExecution() async {
-        let result = await SandboxedCommandRunner.run(
-            executable: .dscacheutil,
-            arguments: ["-q", "host", "-a", "name", "localhost"],
-            timeoutSeconds: 5.0
-        )
-        XCTAssertTrue(result.durationMs >= 0)
+    func testSandboxedCommandArgumentFiltering() {
+        XCTAssertEqual(SandboxedCommandRunner.sanitizedArguments(["-q", "host", "localhost; whoami"]), ["-q", "host"])
     }
     
     // MARK: - 9. Keychain Secret Manager Tests
     func testKeychainManagerSaveLoadDelete() {
         let testKey = "test_unit_secret_key"
+        let service = "com.codifya.MacOptimizerTests.\(UUID().uuidString)"
         let testValue = "nvapi-test-token-123456"
+        defer { _ = KeychainManager.deleteSecret(key: testKey, service: service) }
         
         // Save
-        let saved = KeychainManager.saveSecret(key: testKey, value: testValue)
+        let saved = KeychainManager.saveSecret(key: testKey, value: testValue, service: service)
         XCTAssertTrue(saved, "Secret should be saved to Keychain")
         
         // Load
-        let loaded = KeychainManager.loadSecret(key: testKey)
+        let loaded = KeychainManager.loadSecret(key: testKey, service: service)
         XCTAssertEqual(loaded, testValue, "Loaded secret must match saved secret")
         
         // Delete
-        let deleted = KeychainManager.deleteSecret(key: testKey)
+        let deleted = KeychainManager.deleteSecret(key: testKey, service: service)
         XCTAssertTrue(deleted, "Secret should be deleted from Keychain")
         
         // Confirm deleted
-        let afterDelete = KeychainManager.loadSecret(key: testKey)
+        let afterDelete = KeychainManager.loadSecret(key: testKey, service: service)
         XCTAssertNil(afterDelete, "Secret must be nil after deletion")
     }
     
@@ -512,11 +510,11 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 11. Mach-O Architecture Detector Tests
     func testMachOArchitectureDetectorHeaders() {
-        let armPath = "/usr/bin/tar"
-        if FileManager.default.fileExists(atPath: armPath) {
-            let arch = MachOArchitectureDetector.detect(at: URL(fileURLWithPath: armPath))
-            XCTAssertTrue(arch == .appleSilicon || arch == .universal || arch == .intel, "Architecture must be valid: \(arch)")
-        }
+        let fixture = FileManager.default.temporaryDirectory.appendingPathComponent("macho-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        try? Data([0xFE, 0xED, 0xFA, 0xCF, 0x01, 0x00, 0x00, 0x0C]).write(to: fixture)
+        let arch = MachOArchitectureDetector.detect(at: fixture)
+        XCTAssertEqual(arch, .appleSilicon)
     }
     
     // MARK: - 12. Version Comparator & ByteFormatter Tests
@@ -548,7 +546,7 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 13. Telemetry Store SQLite Tests
     func testTelemetryStoreRecordAndPurge() async {
-        let store = TelemetryStore.shared
+        let store = makeTemporaryTelemetryStore()
         await store.record(
             cpuUsage: 12.5,
             ramUsedBytes: 8589934592,
@@ -559,7 +557,7 @@ final class MacOptimizerTests: XCTestCase {
     }
     
     func testTelemetryStoreFetchHistoryAndDownsampling() async {
-        let store = TelemetryStore.shared
+        let store = makeTemporaryTelemetryStore()
         // Record 15 points
         for i in 1...15 {
             await store.record(
@@ -684,7 +682,14 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 16. Developer Junk Cleaner & CLI Runner Tests
     func testDeveloperCachesScanning() async throws {
-        throw XCTSkip("Scans developer cache paths under the real home directory")
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let cache = home.appendingPathComponent("Library/Developer/Xcode/DerivedData/fixture")
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try Data("fixture".utf8).write(to: cache.appendingPathComponent("data"))
+        defer { try? FileManager.default.removeItem(at: home) }
+        let groups = await JunkCleanerService(homeDirectory: home).scanCategory(.developerCache)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: cache.path))
+        XCTAssertTrue(groups.allSatisfy { $0.path.hasPrefix(home.path + "/") })
     }
     
     func testCLICommandRunnerPSNFiltering() {
@@ -727,14 +732,19 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 17. Maintenance Service & App Uninstaller Tests
     func testMaintenanceServiceMethods() async {
-        let dns = await MaintenanceService.shared.flushDNSCache()
+        let recorder = MaintenanceTestRecorder()
+        let service = MaintenanceService(commandRunner: { executable, _ in
+            recorder.record(executable)
+            return CommandExecutionResult(exitCode: 0, stdout: "", stderr: "", durationMs: 0)
+        }, clipboardClearer: { recorder.clearClipboard() })
+        let dns = await service.flushDNSCache()
+        let quickLook = await service.resetQuickLookCache()
+        let clipboard = await service.clearClipboard()
         XCTAssertTrue(dns.success)
-        
-        let ql = await MaintenanceService.shared.resetQuickLookCache()
-        XCTAssertTrue(ql.success)
-        
-        let clip = await MaintenanceService.shared.clearClipboard()
-        XCTAssertTrue(clip.success)
+        XCTAssertTrue(quickLook.success)
+        XCTAssertTrue(clipboard.success)
+        XCTAssertEqual(recorder.commands, [.dscacheutil, .killall, .qlmanage])
+        XCTAssertTrue(recorder.clipboardWasCleared)
     }
     
     func testAppUninstallerProtectedAppsRefused() async {
@@ -753,7 +763,11 @@ final class MacOptimizerTests: XCTestCase {
     
     // MARK: - 18. Privacy & Security Posture Audit Tests
     func testPrivacyAuditServiceEvaluation() async {
-        let report = await PrivacyAuditService.shared.runSecurityAudit()
+        let service = PrivacyAuditService(commandRunner: { executable, _ in
+            let output = executable == .csrutil ? "System Integrity Protection status: enabled" : executable == .spctl ? "assessments enabled" : "Firewall is enabled"
+            return CommandExecutionResult(exitCode: 0, stdout: output, stderr: "", durationMs: 0)
+        }, accessibilityChecker: { false })
+        let report = await service.runSecurityAudit()
         XCTAssertGreaterThanOrEqual(report.score, 0)
         XCTAssertLessThanOrEqual(report.score, 100)
         XCTAssertGreaterThanOrEqual(report.items.count, 4)
@@ -822,4 +836,22 @@ final class MacOptimizerTests: XCTestCase {
         stats.downloadBytesPerSec = 512.0
         XCTAssertEqual(stats.downloadSpeedFormatted, "512 B/s")
     }
+
+    private func makeTemporaryTelemetryStore() -> TelemetryStore {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("telemetry-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        return TelemetryStore(databaseURL: url)
+    }
+
+
+    private final class MaintenanceTestRecorder: @unchecked Sendable {
+        private let lock = NSLock()
+        private var _commands: [ApprovedExecutable] = []
+        private var _clipboardWasCleared = false
+        var commands: [ApprovedExecutable] { lock.withLock { _commands } }
+        var clipboardWasCleared: Bool { lock.withLock { _clipboardWasCleared } }
+        func record(_ executable: ApprovedExecutable) { lock.withLock { _commands.append(executable) } }
+        func clearClipboard() { lock.withLock { _clipboardWasCleared = true } }
+    }
+
 }

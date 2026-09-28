@@ -375,7 +375,13 @@ final class PerformanceHardeningTests: XCTestCase {
     }
 
     func testCancelledJunkScanTerminates() async throws {
-        throw XCTSkip("Scans user cache and Trash paths under the real home directory")
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: home.appendingPathComponent(".Trash"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let task = Task { await JunkCleanerService(homeDirectory: home, rootDirectory: home).scanAll() }
+        task.cancel()
+        let groups = await task.value
+        XCTAssertEqual(groups.count, 7)
     }
 
     // MARK: - Command injection hardening
@@ -396,7 +402,9 @@ final class PerformanceHardeningTests: XCTestCase {
     // MARK: - Telemetry
 
     func testTelemetryHistoryIsBoundedByMaxPoints() async {
-        let store = TelemetryStore.shared
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("telemetry-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let store = TelemetryStore(databaseURL: url)
         for index in 0..<200 {
             await store.record(cpuUsage: Double(index % 100), ramUsedBytes: 1, ramPressureLevel: 0, diskUsedBytes: 1)
         }

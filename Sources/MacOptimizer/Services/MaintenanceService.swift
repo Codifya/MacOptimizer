@@ -7,11 +7,14 @@ public actor MaintenanceService {
 
     public typealias CommandRunner = @Sendable (ApprovedExecutable, [String]) async -> CommandExecutionResult
     private let commandRunner: CommandRunner
+    private let clipboardClearer: @MainActor @Sendable () -> Void
 
-    public init(commandRunner: @escaping CommandRunner = { executable, arguments in
-        await SandboxedCommandRunner.run(executable: executable, arguments: arguments)
-    }) {
+    public init(
+        commandRunner: @escaping CommandRunner = { executable, arguments in await SandboxedCommandRunner.run(executable: executable, arguments: arguments) },
+        clipboardClearer: @escaping @MainActor @Sendable () -> Void = { NSPasteboard.general.clearContents() }
+    ) {
         self.commandRunner = commandRunner
+        self.clipboardClearer = clipboardClearer
     }
     
     /// Flushes the macOS DNS & mDNSResponder cache
@@ -55,7 +58,7 @@ public actor MaintenanceService {
     /// Clears the system clipboard history
     @MainActor
     public func clearClipboard() -> (success: Bool, message: String) {
-        NSPasteboard.general.clearContents()
+        clipboardClearer()
         return (true, "Pano (Clipboard) içeriği güvenle temizlendi.")
     }
     

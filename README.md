@@ -4,6 +4,8 @@
 
 <div align="center">
 
+<img src="Resources/Brand/AppIcon-256.png" width="128" height="128" alt="MacOptimizer icon">
+
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple&style=flat-square)
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange?logo=swift&style=flat-square)
 ![License](https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square)

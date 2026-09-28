@@ -19,19 +19,28 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1
+        with:
+          args: git --redact /github/workspace
 
   dependency-audit:
     name: Swift Package Audit
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Audit Dependencies
+      - name: Select Xcode 16.4
         run: |
-          swift package dump-package > /dev/null
-          echo "No vulnerable dependencies detected."
+          ls /Applications | grep Xcode
+          test -d /Applications/Xcode_16.4.app || { echo "Xcode 16.4 is missing from this runner" >&2; exit 1; }
+          sudo xcode-select --switch /Applications/Xcode_16.4.app
+
+      - name: Verify Swift Version
+        run: swift --version
+
+      - name: Resolve and List Dependencies
+        run: |
+          swift package resolve
+          swift package show-dependencies
+          echo "Dependency inventory complete; this package declares no third-party dependencies."

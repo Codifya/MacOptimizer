@@ -1,4 +1,4 @@
-name: Release & Apple Notarization
+name: Release Build
 
 on:
   push:
@@ -12,15 +12,21 @@ permissions:
 
 jobs:
   release:
-    name: Build, Sign, Notarize & Release
-    runs-on: macos-14
+    name: Build & Release
+    runs-on: macos-15
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app || true
+      - name: Select Xcode 16.4
+        run: |
+          ls /Applications | grep Xcode
+          test -d /Applications/Xcode_16.4.app || { echo "Xcode 16.4 is missing from this runner" >&2; exit 1; }
+          sudo xcode-select --switch /Applications/Xcode_16.4.app
+
+      - name: Verify Swift Version
+        run: swift --version
 
       - name: Build Standalone Application
         run: ./Scripts/build_app.sh

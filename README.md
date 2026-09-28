@@ -1,5 +1,7 @@
 # ⚡ MacOptimizer Pro
 
+> **Safety notice:** Releases [v2.1.0–v3.0.0](https://github.com/Codifya/MacOptimizer/releases) contain known safety defects. Do not use these releases. A fixed, signed release is in progress.
+
 <div align="center">
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B%20%28Sonoma%2FSequoia%29-blue?logo=apple&style=flat-square)

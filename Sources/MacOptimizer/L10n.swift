@@ -7,7 +7,15 @@ public enum L10n {
     }
 
     public static func string(_ key: String, table: Table = .common) -> String {
-        if let language = Bundle.main.preferredLocalizations.first,
+        let preferences = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
+            ?? Bundle.main.preferredLocalizations
+        let language = preferences.lazy.compactMap { preference in
+            Bundle.module.localizations.first {
+                preference.caseInsensitiveCompare($0) == .orderedSame
+                    || preference.lowercased().hasPrefix($0.lowercased() + "-")
+            }
+        }.first
+        if let language,
            let path = Bundle.module.path(forResource: language, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return bundle.localizedString(forKey: key, value: key, table: table.rawValue)

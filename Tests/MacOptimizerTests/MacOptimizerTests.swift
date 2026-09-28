@@ -581,8 +581,36 @@ final class MacOptimizerTests: XCTestCase {
         let turkish = await service.chatWithCopilot(userMessage: "Önbellek temizle ve DNS sıfırla", history: [],
                                                     systemContext: "", config: NIMConfig())
         XCTAssertEqual(turkish.actions.map(\.type), [.scanJunk, .flushDNS])
-        let memory = try? await LocalHeuristicProvider().queryCopilot(messages: [AIChatMessage(role: .user, content: "Why is memory high?")], snapshotContext: "ctx")
-        XCTAssertTrue(memory?.hasSuffix("ctx") == true)
+        let question = [AIChatMessage(role: .user, content: "Why is memory high?")]
+        let withoutSnapshot = try? await LocalHeuristicProvider().queryCopilot(messages: question, snapshotContext: "ctx")
+        XCTAssertEqual(withoutSnapshot, L10n.string("I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps.", table: .ai))
+
+        var memoryStats = MemoryStats()
+        memoryStats.totalBytes = 16_000_000_000
+        memoryStats.activeBytes = 8_000_000_000
+        let snapshot = LocalHeuristicProvider.SystemSnapshot(hardware: HardwareInfo(), memory: memoryStats, cpu: CPUStats(), disk: DiskStats())
+        let memory = try? await LocalHeuristicProvider(snapshot: snapshot).queryCopilot(messages: question, snapshotContext: "ctx")
+        XCTAssertFalse(memory?.contains("ctx") ?? true, "The English cloud snapshot must not be shown to the user")
+        XCTAssertTrue(memory?.hasSuffix(LocalHeuristicProvider.localizedSummary(snapshot)) == true)
+    }
+
+    func testOfflineMemoryReplyIsLocalizedForTurkishUsers() async {
+        let prior = UserDefaults.standard.object(forKey: "AppleLanguages")
+        defer {
+            if let prior { UserDefaults.standard.set(prior, forKey: "AppleLanguages") }
+            else { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        }
+        UserDefaults.standard.set(["tr"], forKey: "AppleLanguages")
+        var memoryStats = MemoryStats()
+        memoryStats.totalBytes = 16_000_000_000
+        memoryStats.activeBytes = 8_000_000_000
+        let snapshot = LocalHeuristicProvider.SystemSnapshot(hardware: HardwareInfo(), memory: memoryStats, cpu: CPUStats(), disk: DiskStats())
+        let reply = try? await LocalHeuristicProvider(snapshot: snapshot)
+            .queryCopilot(messages: [AIChatMessage(role: .user, content: "bellek neden dolu?")], snapshotContext: "Mac model: X")
+        XCTAssertTrue(reply?.contains("Mac modeli:") == true, reply ?? "")
+        XCTAssertTrue(reply?.contains("RAM: %50") == true, reply ?? "")
+        XCTAssertFalse(reply?.contains("Mac model:") ?? true, reply ?? "")
+        XCTAssertFalse(reply?.contains("Free disk") ?? true, reply ?? "")
     }
     
     // MARK: - 11. Mach-O Architecture Detector Tests
@@ -782,6 +810,34 @@ final class MacOptimizerTests: XCTestCase {
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "help"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "--version"]))
         XCTAssertTrue(CLICommandRunner.shouldHandleCLI(arguments: ["MacOptimizer", "unknown"]))
+    }
+
+    func testCLIStatusOutputIsEnglishOnly() {
+        let prior = UserDefaults.standard.object(forKey: "AppleLanguages")
+        defer {
+            if let prior { UserDefaults.standard.set(prior, forKey: "AppleLanguages") }
+            else { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        }
+        UserDefaults.standard.set(["tr"], forKey: "AppleLanguages")
+        let turkishCharacters = CharacterSet(charactersIn: "çğıİöşüÇĞÖŞÜ")
+        var battery = BatteryStats()
+        battery.powerSource = "AC Adapter"
+        var hardware = HardwareInfo()
+        hardware.uptimeString = "2 d, 3 h"
+        for level in [MemoryStats.MemoryPressureLevel.normal, .warning, .critical] {
+            for thermal in CPUStats.ThermalState.allCases {
+                var memory = MemoryStats()
+                memory.pressureLevel = level
+                var cpu = CPUStats()
+                cpu.thermalState = thermal
+                let report = CLICommandRunner.statusReport(memory: memory, cpu: cpu, disk: DiskStats(), battery: battery, hardware: hardware)
+                XCTAssertNil(report.rangeOfCharacter(from: turkishCharacters), report)
+                XCTAssertFalse(report.contains(level.rawValue) && level != .normal, report)
+                XCTAssertFalse(report.contains(thermal.rawValue), report)
+                XCTAssertTrue(report.contains("Memory Pressure: \(CLICommandRunner.englishLabel(for: level))"))
+                XCTAssertTrue(report.contains("Thermal State: \(CLICommandRunner.englishLabel(for: thermal))"))
+            }
+        }
     }
 
     func testCLIHelpIsEnglishOnly() {

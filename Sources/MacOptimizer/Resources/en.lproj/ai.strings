@@ -108,3 +108,7 @@
 "NVIDIA NIM API key is missing." = "NVIDIA NIM API key is missing.";
 "Invalid /chat/completions URL format." = "Invalid /chat/completions URL format.";
 "Could not parse the API response." = "Could not parse the API response.";
+"I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps." = "I reviewed your Mac’s memory status. To reduce memory pressure, you can try closing the most demanding apps.";
+"Mac model: %@ (%@), macOS version: %@" = "Mac model: %@ (%@), macOS version: %@";
+"RAM: %lld%%" = "RAM: %lld%%";
+"CPU: %@%%, Free disk: %lld%%" = "CPU: %@%%, Free disk: %lld%%";

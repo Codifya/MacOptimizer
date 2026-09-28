@@ -31,4 +31,19 @@
 <key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
 <key>one</key><string>%lld Duplicate File</string><key>other</key><string>%lld Duplicate Files</string></dict>
 </dict>
+<key>%lld apps detected • Total: %@</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>%#@count@ detected • Total: %@</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld app</string><key>other</key><string>%lld apps</string></dict>
+</dict>
+<key>Related Files Found (%lld items)</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>Related Files Found (%#@count@)</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld item</string><key>other</key><string>%lld items</string></dict>
+</dict>
+<key>New versions available for %lld apps!</key><dict>
+<key>NSStringLocalizedFormatKey</key><string>New versions available for %#@count@!</string>
+<key>count</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>lld</string>
+<key>one</key><string>%lld app</string><key>other</key><string>%lld apps</string></dict>
+</dict>
 </dict></plist>

@@ -354,12 +354,14 @@ public final class AppState: ObservableObject {
             processNames: runningProcesses.prefix(4).map { "\($0.name) (PID: \($0.pid))" },
             includeProcesses: UserDefaults.standard.bool(forKey: "MacOptimizer_IncludeRunningAppNames")
         )
-        
+        let localSnapshot = LocalHeuristicProvider.SystemSnapshot(hardware: hardwareInfo, memory: memoryStats, cpu: cpuStats, disk: diskStats)
+
         Task {
             let result = await AIAssistantService.shared.chatWithCopilot(
                 userMessage: trimmed,
                 history: self.chatMessages,
                 systemContext: context,
+                localSnapshot: localSnapshot,
                 config: self.nimConfig
             )
             

@@ -10,21 +10,23 @@ public struct AppManagerView: View {
     @State private var appToUninstall: InstalledApp?
     
     enum AppFilter: String, CaseIterable, Identifiable {
-        case all = "Tümü"
-        case userOnly = "Kullanıcı"
+        case all = "All"
+        case userOnly = "User"
         case appleSilicon = "Apple Silicon"
         case universal = "Universal"
         case intel = "Intel (x86)"
-        case updates = "Güncellemeler"
+        case updates = "Updates"
         
         var id: String { rawValue }
+        var label: String { L10n.string(rawValue, table: .cleanup) }
     }
     
     enum AppSortOption: String, CaseIterable, Identifiable {
-        case size = "Boyuta Göre"
-        case name = "İsme Göre"
+        case size = "By Size"
+        case name = "By Name"
         
         var id: String { rawValue }
+        var label: String { L10n.string(rawValue, table: .cleanup) }
     }
     
     private var filteredApps: [InstalledApp] {
@@ -110,17 +112,17 @@ public struct AppManagerView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Yüklü Uygulamalar & Kaldırıcı")
+                    Text(l10n: "Installed Apps & Uninstaller", table: .cleanup)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
                     if !appState.installedApps.isEmpty {
-                        Text("\(appState.installedApps.count) uygulama tespit edildi • Toplam: \(ByteFormatter.format(totalAppsSize))")
+                        Text(L10n.string("%lld apps detected • Total: %@", table: .cleanup, appState.installedApps.count, ByteFormatter.format(totalAppsSize)))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     } else {
-                        Text("Mac'inizde kurulu tüm uygulamaları, mimarilerini ve boyutlarını inceleyin.")
+                        Text(l10n: "Review all apps installed on your Mac, their architectures, and sizes.", table: .cleanup)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -143,7 +145,7 @@ public struct AppManagerView: View {
                 
                 HStack(spacing: 8) {
                     ActionButton(
-                        title: appState.isScanningApps ? "Taranıyor..." : "Uygulamaları Tara",
+                        title: appState.isScanningApps ? L10n.string("Scanning...", table: .cleanup) : L10n.string("Scan Apps", table: .cleanup),
                         iconName: "arrow.clockwise",
                         gradient: SystemTheme.primaryGradient,
                         isLoading: appState.isScanningApps
@@ -152,7 +154,7 @@ public struct AppManagerView: View {
                     }
                     
                     ActionButton(
-                        title: appState.isCheckingUpdates ? "Denetleniyor..." : "Güncellemeleri Bul",
+                        title: appState.isCheckingUpdates ? L10n.string("Checking...", table: .cleanup) : L10n.string("Find Updates", table: .cleanup),
                         iconName: "arrow.triangle.2.circlepath",
                         gradient: SystemTheme.updateGradient,
                         isLoading: appState.isCheckingUpdates
@@ -202,7 +204,7 @@ public struct AppManagerView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
                 .font(.system(size: 12))
-            TextField("Uygulama adı veya Bundle ID ara...", text: $searchText)
+            TextField(L10n.string("Search by app name or Bundle ID...", table: .cleanup), text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
             
@@ -224,18 +226,18 @@ public struct AppManagerView: View {
     }
     
     private var filterSegmentedPicker: some View {
-        Picker("Filtrele", selection: $selectedFilter) {
+        Picker(L10n.string("Filter", table: .cleanup), selection: $selectedFilter) {
             ForEach(AppFilter.allCases) { filter in
-                Text(filter.rawValue).tag(filter)
+                Text(verbatim: filter.label).tag(filter)
             }
         }
         .pickerStyle(.segmented)
     }
     
     private var sortPicker: some View {
-        Picker("Sırala", selection: $sortOption) {
+        Picker(L10n.string("Sort", table: .cleanup), selection: $sortOption) {
             ForEach(AppSortOption.allCases) { opt in
-                Text(opt.rawValue).tag(opt)
+                Text(verbatim: opt.label).tag(opt)
             }
         }
         .pickerStyle(.menu)
@@ -275,17 +277,17 @@ public struct AppManagerView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(SystemTheme.primaryGradient)
                 
-                Text("Uygulamalar Taranmadı")
+                Text(l10n: "Apps Not Scanned", table: .cleanup)
                     .font(.system(size: 16, weight: .bold))
                 
-                Text("Kurulu olan uygulamaları listelemek ve güncelleme kontrolü yapmak için taramayı başlatın.")
+                Text(l10n: "Start a scan to list installed apps and check for updates.", table: .cleanup)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 400)
                 
                 ActionButton(
-                    title: "Uygulamaları Tara",
+                    title: L10n.string("Scan Apps", table: .cleanup),
                     iconName: "magnifyingglass",
                     gradient: SystemTheme.primaryGradient
                 ) {

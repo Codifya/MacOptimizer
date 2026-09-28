@@ -108,7 +108,7 @@ public actor AutonomousGuardService {
                 lastThermalAlertTime = now
                 let alert = AutonomousAlert(
                     title: L10n.string("Thermal Throttling / Temperature Warning", table: .services),
-                    message: L10n.string("CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware.", table: .services, cpu.thermalState.rawValue),
+                    message: L10n.string("CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware.", table: .services, cpu.thermalState.localizedTitle),
                     type: .runawayProcess,
                     timestamp: now,
                     isResolved: false,

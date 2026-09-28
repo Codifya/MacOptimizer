@@ -3,6 +3,10 @@
 Baseline for the performance, memory and concurrency hardening pass. It is taken at commit `35dacca`
 (MacOptimizer Pro 3.0.0), before any change.
 
+> **Status note:** the "Before" data describes v3.0.0 and is kept as a historical record. Some
+> features mentioned here, such as RAM purge, were removed later. See
+> [PERFORMANCE_REPORT.md](PERFORMANCE_REPORT.md) for the current state.
+
 ## How this baseline was established
 
 This pass was carried out in a Linux container, not on a Mac. That limits what can be measured:

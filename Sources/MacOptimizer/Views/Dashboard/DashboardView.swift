@@ -351,7 +351,7 @@ private struct DashboardHardwareHeader: View {
     }
     
     private var thermalBadge: some View {
-        MetricBadge(text: metrics.cpuStats.thermalState.rawValue, colorName: metrics.cpuStats.thermalState.colorName)
+        MetricBadge(text: metrics.cpuStats.thermalState.localizedTitle, colorName: metrics.cpuStats.thermalState.colorName)
     }
 }
 
@@ -380,7 +380,7 @@ private struct DashboardGaugesGrid: View {
                     percentage: metrics.cpuStats.totalUsage / 100.0,
                     title: L10n.string("Processor (CPU)", table: .dashboard),
                     valueText: String(format: "%.1f%%", metrics.cpuStats.totalUsage),
-                    subText: L10n.string("%lld cores • %@", table: .dashboard, metrics.cpuStats.physicalCores, metrics.cpuStats.thermalState.rawValue),
+                    subText: L10n.string("%lld cores • %@", table: .dashboard, metrics.cpuStats.physicalCores, metrics.cpuStats.thermalState.localizedTitle),
                     gradient: SystemTheme.primaryGradient,
                     size: 115
                 )

@@ -71,17 +71,17 @@ public struct AutonomousGuardView: View {
                 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Otonom Sistem Koruması & Watchdog")
+                        Text(l10n: "Autonomous System Protection & Watchdog", table: .dashboard)
                             .font(.system(size: 16, weight: .bold))
                             .lineLimit(1)
                         
                         MetricBadge(
-                            text: appState.autonomousConfig.isWatchdogActive ? "Aktif" : "Devre Dışı",
+                            text: appState.autonomousConfig.isWatchdogActive ? L10n.string("Enabled", table: .dashboard) : L10n.string("Disabled", table: .dashboard),
                             colorName: appState.autonomousConfig.isWatchdogActive ? "green" : "gray"
                         )
                     }
                     
-                    Text("Bellek baskılarını, donan arka plan süreçlerini ve disk tıkanıklıklarını sürekli gözlemler; gerektiğinde otomatik müdahale eder.")
+                    Text(l10n: "Continuously monitors memory pressure, frozen background processes, and disk congestion; intervenes automatically when needed.", table: .dashboard)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -111,11 +111,11 @@ public struct AutonomousGuardView: View {
                     HStack {
                         Image(systemName: "wand.and.stars")
                             .foregroundColor(.green)
-                        Text("Otomatik İyileştirme")
+                        Text(l10n: "Auto-Healing", table: .dashboard)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
-                    Text("\(autoHealedCount) Olay")
+                    Text(L10n.string("%lld events", table: .dashboard, Int64(autoHealedCount)))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.green)
                 }
@@ -127,11 +127,11 @@ public struct AutonomousGuardView: View {
                     HStack {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text("Bekleyen Uyarılar")
+                        Text(l10n: "Pending Alerts", table: .dashboard)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
-                    Text("\(appState.unresolvedAlertsCount) Bekliyor")
+                    Text(L10n.string("%lld pending", table: .dashboard, Int64(appState.unresolvedAlertsCount)))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(appState.unresolvedAlertsCount > 0 ? .orange : .secondary)
                 }
@@ -143,11 +143,11 @@ public struct AutonomousGuardView: View {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.blue)
-                        Text("Çözülen Olaylar")
+                        Text(l10n: "Resolved Events", table: .dashboard)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
-                    Text("\(resolvedCount) Çözüldü")
+                    Text(L10n.string("%lld resolved", table: .dashboard, Int64(resolvedCount)))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.blue)
                 }
@@ -161,13 +161,13 @@ public struct AutonomousGuardView: View {
         GlassCard(cornerRadius: 16, padding: 16) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Otonom İzleme & Anomali Günlüğü", systemImage: "waveform.path.ecg")
+                    Label(L10n.string("Autonomous Monitoring & Anomaly Log", table: .dashboard), systemImage: "waveform.path.ecg")
                         .font(.system(size: 14, weight: .bold))
                     
                     Spacer()
                     
                     if !appState.autonomousAlerts.isEmpty {
-                        Button("Günlüğü Temizle") {
+                        Button(L10n.string("Clear Log", table: .dashboard)) {
                             appState.clearAutonomousAlerts()
                         }
                         .buttonStyle(.plain)
@@ -182,10 +182,10 @@ public struct AutonomousGuardView: View {
                             .font(.system(size: 40))
                             .foregroundColor(.green.opacity(0.8))
                         
-                        Text("Sistemde Herhangi Bir Anomali Yok")
+                        Text(l10n: "No Anomalies Detected", table: .dashboard)
                             .font(.system(size: 14, weight: .bold))
                         
-                        Text("Arka plan denetleyicisi sistemi izliyor. Olağandışı bir durum veya bellek baskısı olduğunda burada listelenecektir.")
+                        Text(l10n: "The background monitor is watching the system. Any unusual activity or memory pressure will be listed here.", table: .dashboard)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -210,11 +210,11 @@ public struct AutonomousGuardView: View {
                                             .lineLimit(1)
                                         
                                         if alert.autoHealed {
-                                            MetricBadge(text: "Otomatik İyileştirildi", colorName: "green")
+                                            MetricBadge(text: L10n.string("Auto-Healed", table: .dashboard), colorName: "green")
                                         } else if alert.isResolved {
-                                            MetricBadge(text: "Çözüldü", colorName: "blue")
+                                            MetricBadge(text: L10n.string("Resolved", table: .dashboard), colorName: "blue")
                                         } else {
-                                            MetricBadge(text: "Aktif Uyarı", colorName: "orange")
+                                            MetricBadge(text: L10n.string("Active Alert", table: .dashboard), colorName: "orange")
                                         }
                                     }
                                     

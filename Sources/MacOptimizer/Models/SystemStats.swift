@@ -22,6 +22,15 @@ public struct MemoryStats: Sendable, Equatable {
         case warning = "Uyarı"
         case critical = "Kritik"
         
+        /// Localized display label. Raw values are kept stable and must not be shown in the UI.
+        public var localizedTitle: String {
+            switch self {
+            case .normal: return L10n.string("Normal", table: .dashboard)
+            case .warning: return L10n.string("Warning", table: .dashboard)
+            case .critical: return L10n.string("Critical", table: .dashboard)
+            }
+        }
+
         public var colorName: String {
             switch self {
             case .normal: return "green"
@@ -71,6 +80,16 @@ public struct CPUStats: Sendable, Equatable {
         case serious = "Yüksek Sıcaklık (Kısılma Riski)"
         case critical = "Kritik Sıcaklık (Fanlar Maksimumda)"
         
+        /// Localized display label. Raw values are kept stable and must not be shown in the UI.
+        public var localizedTitle: String {
+            switch self {
+            case .nominal: return L10n.string("Normal (Cool)", table: .dashboard)
+            case .fair: return L10n.string("Slightly Warm", table: .dashboard)
+            case .serious: return L10n.string("High Temperature (Throttling Risk)", table: .dashboard)
+            case .critical: return L10n.string("Critical Temperature (Fans at Maximum)", table: .dashboard)
+            }
+        }
+
         public var colorName: String {
             switch self {
             case .nominal: return "green"
@@ -122,7 +141,7 @@ public struct BatteryStats: Sendable, Equatable {
     public var temperatureCelsius: Double = 28.0
     public var designCapacityMah: Int = 0
     public var timeRemainingFormatted: String = ""
-    public var powerSource: String = "AC Gücü"
+    public var powerSource: String = L10n.string("AC Power", table: .dashboard)
     
     public var isOverheating: Bool {
         temperatureCelsius > 38.0

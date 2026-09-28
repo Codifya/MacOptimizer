@@ -1,5 +1,8 @@
 # Localization
 
+The app ships in English and Turkish and follows the macOS system language (English is the
+fallback). CLI output is English only and does not use these tables.
+
 Add each key and translation to the area's table in
 `Sources/MacOptimizer/Resources/en.lproj/<table>.strings` and
 `Sources/MacOptimizer/Resources/tr.lproj/<table>.strings`. Keep English as the key/source value; use

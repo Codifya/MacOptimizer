@@ -3,6 +3,11 @@
 Companion to [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md), which has the method and the
 "before" data.
 
+> **Status note:** this report was written for the hardening pull request (#1), which was prepared
+> on Linux. That pull request was later built and tested on macOS before it was merged, and CI now
+> runs the full suite on macOS. Later changes are reflected in the "Remaining risks" section: RAM
+> purge was removed (#5) and the first CPU sample no longer uses a placeholder (#5).
+
 **Evidence levels used below**
 
 - **Measured**: executed with Swift 6.0.3 on Linux against the shipping source files.
@@ -173,7 +178,7 @@ main actor wait synchronously on background work: every bridge is an `async` con
   quick actions do not.
 - In the sidebar, only `SidebarMemoryBadge` and `SidebarAvailableMemoryText` observe metrics. The
   navigation `List` no longer rebuilds every 2.5 s.
-- `MenuBarView` observes `LiveMetricsStore` for metrics and `AppState` for purge and watchdog state.
+- `MenuBarView` observes `LiveMetricsStore` for metrics and `AppState` for app state.
 - Screens that show no metrics (Settings, App Manager, Junk Cleaner, Startup, Security, History,
   Updates, AI) no longer re-evaluate on metrics ticks. That removes, for example, the App Manager's
   per-tick filter and sort over all installed apps.
@@ -228,24 +233,26 @@ main actor wait synchronously on background work: every bridge is an `async` con
   - Swift 6 language-mode typecheck of every non-UI source file (with Linux shims for AppKit, IOKit
     and CryptoKit symbols) is clean.
 - **Not run here**: the XCTest suite and the SwiftUI/AppKit targets need macOS. CI
-  (`.github/workflows/ci.yml`, macos-14) runs `swift build` and `swift test`.
+  (`.github/workflows/ci.yml`, now macos-15 with Xcode 16.4) runs `swift build` and `swift test`.
 
 ## Remaining risks
 
 1. **No macOS build was performed in this environment.** The SwiftUI and AppKit files
    (`AppState`, the views, `SystemMonitorService`, `TelemetryStore`, `AppIconView`) were only
-   syntax-checked. Typecheck failures, if any, will surface in CI.
+   syntax-checked here. (Resolved: the pull request was built and tested on macOS before merge,
+   and CI builds it on macOS.)
 2. `ps` is still spawned while a process screen is visible (every 7.5 s). A `libproc`
    (`proc_listallpids`, `proc_pid_rusage`) implementation would remove the spawn, but it cannot read
    RSS or CPU of root-owned processes (for example `WindowServer`) without privileges, whereas setuid
    `ps` can. Revisit only with a privileged helper.
-3. The first CPU sample still reports a placeholder (15 %) until a delta exists (unchanged behaviour).
+3. The first CPU sample reported a placeholder (15 %) until a delta existed. (Resolved in #5: CPU
+   usage now needs two real samples.)
 4. Visibility is app-level occlusion. A visible but fully covered main window counts as hidden,
    which is intended.
-5. `MemoryOptimizerService.purgeMemory` still allocates and touches up to 256 MB by design. That is
-   product behaviour, not a leak.
-6. `BENCHMARKS.md` numbers predate this pass and were not reproducible from the code. For example,
-   the junk walk was serialised on an actor, not parallel.
+5. `MemoryOptimizerService.purgeMemory` allocated and touched up to 256 MB by design. (Resolved in
+   #5: RAM purge was removed.)
+6. `BENCHMARKS.md` numbers predated this pass and were not reproducible from the code. For example,
+   the junk walk was serialised on an actor, not parallel. (Resolved: the numbers were removed.)
 
 ## Recommended Instruments runs
 

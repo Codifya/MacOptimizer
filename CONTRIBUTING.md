@@ -1,68 +1,67 @@
-# 🤝 Contributing to MacOptimizer Pro
+# Contributing to MacOptimizer Pro
 
-Thank you for your interest in contributing to **MacOptimizer Pro**! We welcome bug reports, feature suggestions, architecture improvements, and code contributions from the macOS open-source community.
+Thank you for your interest in contributing. Bug reports, suggestions and pull requests are
+welcome.
 
----
+## Code of conduct
 
-## 🧭 Code of Conduct
+Be respectful, inclusive and constructive.
 
-All contributors and maintainers are expected to adhere to standard respectful, inclusive, and professional communication standards.
-
----
-
-## 🛠️ Development Setup
+## Development setup
 
 ### Prerequisites
-* macOS 14.0 (Sonoma) or macOS 15.0+ (Sequoia)
-* Xcode 15.0+ / Xcode 16.0+ (with Command Line Tools installed: `xcode-select --install`)
-* Swift 5.9+
-* Git
 
-### Building from Source
+- macOS 14 or later
+- Xcode 16 or later (Swift 6 toolchain); CI uses Xcode 16.4
+- Git
+
+### Building from source
+
 ```bash
-# Clone the repository
-git clone https://github.com/osmancagrigenc/MacOsOptimizer.git
-cd MacOsOptimizer
+git clone https://github.com/Codifya/MacOptimizer.git
+cd MacOptimizer
 
-# Run unit tests
-swift test
-
-# Build debug binary
-swift build
-
-# Build standalone .app bundle
-./Scripts/build_app.sh
+swift build              # debug build
+swift test               # run the test suite
+./Scripts/build_app.sh   # build MacOptimizer.app (unsigned)
 ```
 
----
+## Guidelines
 
-## 📐 Architecture & Coding Guidelines
+1. **Safety first.** Every file removal must go through `SafeOperationExecutor` with a
+   `CleaningPlan` the user has reviewed and confirmed. Never call `FileManager.removeItem` or
+   `trashItem` directly from a feature.
+2. **No shell.** Run external tools through `SandboxedCommandRunner` (add the absolute path to
+   `ApprovedExecutable`) or `SystemCommandRunner` with an argument array. Never build a shell
+   command string, and never pass remote data as a command.
+3. **Swift concurrency.** Use `async`/`await` and actors. Keep blocking file I/O off the
+   cooperative thread pool (see `runBlocking`), and make long scans cancellable.
+4. **Native APIs first.** Prefer Darwin, IOKit, `FileManager` and `ProcessInfo` over spawning
+   processes.
+5. **Localization.** User-facing strings go through `L10n` with English and Turkish entries. See
+   [docs/LOCALIZATION.md](docs/LOCALIZATION.md). CLI output stays English.
+6. **No secrets in code.** API keys go through `KeychainManager`.
+7. **Honest results.** Report the real outcome of an operation (exit codes, bytes actually
+   freed). Do not show success for work that did not happen.
 
-1. **Zero-Harm First**: Every filesystem or process operation MUST be validated through `SafetyPolicyEngine`. Never write direct file removal code without policy checks.
-2. **Swift Concurrency**: Use native Swift `async`/`await`, `TaskGroup`, and actors. Avoid legacy dispatch queues or callback pyramids.
-3. **Darwin & Native APIs Over Shell Commands**: Prefer Darwin Mach Kernel C APIs (`host_statistics64`, `sysctlbyname`), `FileManager`, and `ProcessInfo` over executing `/bin/sh` or `/bin/ps`.
-4. **Clean UI & Liquid Glass**: Adhere to SwiftUI best practices with fluid responsive sizing (`ViewThatFits`, `LazyVGrid` adaptive columns, `maxWidth: .infinity`).
-5. **No Secrets in Code**: Never commit API keys, personal paths, or tokens. API keys must use `KeychainManager`.
+## Tests
 
----
+- New features and policy changes need tests in `Tests/MacOptimizerTests/`.
+- Tests must be hermetic: they must not change the machine they run on. Use temporary
+  directories, a fake home folder, injected command runners and throwaway Keychain items. CI
+  checks that the clipboard and Keychain are unchanged after the run.
+- Run the suite before opening a pull request:
 
-## 🧪 Testing Requirements
-
-* All new features and policy changes **must include unit tests** in `Tests/MacOptimizerTests/`.
-* Verify tests before opening a pull request:
   ```bash
-  swift test --enable-code-coverage
+  swift test
   ```
-* All property-based safety tests must pass with 0 failures.
 
----
+## Pull requests
 
-## 🚀 Pull Request Workflow
+1. Fork the repository and create a descriptive branch.
+2. Use Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
+3. Make sure `swift build` and `swift test` pass.
+4. Open a pull request against `main` with a summary of the change, the motivation and how you
+   tested it. Keep the documentation in line with what the code does.
 
-1. Fork the repository and create a descriptive branch:
-   ```bash
-   git checkout -b feature/awesome-telemetry-chart
-   ```
-2. Commit your changes following standard Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
-3. Ensure `swift test` passes cleanly.
-4. Open a Pull Request against the `main` branch with a clear summary of changes, motivation, and test coverage evidence.
+Security problems: please follow [SECURITY.md](SECURITY.md) instead of opening a public issue.

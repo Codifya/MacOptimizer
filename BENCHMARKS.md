@@ -1,43 +1,38 @@
-# 🏎️ MacOptimizer Pro Benchmarks & Performance Metrics
+# Benchmarks
 
-This document outlines the performance benchmarks, measurement methodologies, and hardware test environments for MacOptimizer Pro.
+There are currently **no verified benchmark figures** for MacOptimizer Pro.
 
----
+Earlier versions of this page and of the README listed speed-ups (for example Mach-O detection
+"~120x faster" than `lipo`, telemetry reads "< 0.02 ms", a "0.42 s" scan of 50,000 files,
+"1.2 GB/s" hashing and "~0.01 %" watchdog CPU). None of them had a reproducible measurement in
+this repository, and some described code that did not exist at the time (the junk scan was not
+parallel). They have been removed.
 
-## 🖥️ Test Environment
+## What is measured
 
-* **Hardware**: Apple MacBook Pro 14" (Apple M3 Pro, 18 GB Unified Memory)
-* **OS**: macOS 15.0 (Sequoia) / macOS 14.5 (Sonoma)
-* **Storage**: 512 GB Apple NVMe SSD (APFS)
-* **Compiler**: Swift 5.10 / Xcode 15.4 (`-O -whole-module-optimization`)
+[docs/PERFORMANCE_BASELINE.md](docs/PERFORMANCE_BASELINE.md) and
+[docs/PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md) contain figures from the monitoring and
+concurrency hardening work. Each figure is labelled as measured (run against the source), simulated
+(the scheduler driven by a fake clock), static (counted from the code) or
+`REQUIRES_INSTRUMENTS_VALIDATION` (not measured yet).
 
----
+## How to measure
 
-## 📊 Benchmark Results
+- **Resource use of the app**: build a release app with `./Scripts/build_app.sh` and follow the
+  Instruments runs listed at the end of [docs/PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)
+  (Allocations, Leaks, Time Profiler, System Trace, Energy Log).
+- **A single operation**: time it on your own machine and state the hardware, macOS version,
+  build configuration and data set (for example the number and size of files) with the result.
 
-> **Note (hardening pass):** the figures below predate the performance/concurrency hardening pass and
-> were not reproducible from the code at that time (e.g. the junk walk was serialised on an actor,
-> not parallel). See [`docs/PERFORMANCE_BASELINE.md`](docs/PERFORMANCE_BASELINE.md) and
-> [`docs/PERFORMANCE_REPORT.md`](docs/PERFORMANCE_REPORT.md) for measured/derived numbers and the
-> Instruments runs that validate them.
+Please include that context with any number you contribute to this page.
 
-| Benchmark Metric | Traditional Shell/Script Method | MacOptimizer Pro Native Architecture | Improvement Factor |
-| :--- | :--- | :--- | :--- |
-| **Mach-O Architecture Detection** | `lipo -archs /Path/to/binary` (~ 4.8 ms per app) | `MachOArchitectureDetector` (Direct Header Bytes) (~ 0.04 ms per app) | **~ 120x Faster** |
-| **System Telemetry Retrieval** | Parsing `/bin/ps` and `top -l 1` (~ 45 ms) | Darwin Mach `host_statistics64` & `sysctl` (< 0.02 ms) | **~ 2200x Faster** |
-| **Multi-Category Junk Scanning** | Sequential single-thread directory walk (~ 4.2 s for 50k files) | Parallel `TaskGroup` multi-core directory walk (~ 0.72 s for 50k files) | **~ 5.8x Faster** |
-| **App Leftovers Discovery** | Full root disk `find` recursive traversal (~ 12.5 s) | Targeted `~/Library/Application Support` orphan match (~ 0.35 s) | **~ 35x Faster** |
-| **Watchdog Idle CPU Usage** | Periodic bash cron / poller (~ 1.5% - 3.0% CPU) | Async Swift background actor with timer (~ 0.01% CPU) | **Negligible CPU Footprint** |
+## Design notes
 
----
+These describe how the code works, not how fast it is:
 
-## 🔬 Reproducing the Benchmarks
-
-You can run the built-in test suite to verify binary parsing and telemetry throughput:
-```bash
-# Run all unit tests with execution timings
-swift test --enable-code-coverage
-```
-
-### Mach-O Architecture Detector Benchmark
-Direct header parsing loads the first 4096 bytes of the binary using `FileHandle` and reads the 32-bit magic number (`0xFEEDFACF` for 64-bit Mach-O, `0xCAFEBABE` for Universal Fat binaries). This completely bypasses the macOS process creation overhead of spawning `/usr/bin/lipo`.
+- `MachOArchitectureDetector` reads the first 4096 bytes of a binary with `FileHandle` and checks
+  the magic number (`0xFEEDFACF` for 64-bit Mach-O, `0xCAFEBABE` for universal binaries) instead
+  of spawning `lipo`.
+- Live metrics come from `host_statistics64`, `sysctl`, IOKit and `getifaddrs`. Only the process
+  list uses `/bin/ps`, and only while a screen or the watchdog needs it.
+- The duplicate finder compares a 64 KB prefix before hashing whole files with SHA-256.

@@ -50,5 +50,20 @@ jobs:
           test "$clipboard_after" = "$CLIPBOARD_BEFORE"
           test "$keychain_items_after" = "$KEYCHAIN_ITEMS_BEFORE"
 
-      - name: Build Release App Bundle
+      - name: Build Release App Bundle (universal)
+        env:
+          UNIVERSAL: "1"
+          SCRATCH_PATH: ${{ runner.temp }}/swift-build-universal
         run: ./Scripts/build_app.sh
+
+      - name: Verify App Bundle
+        shell: bash
+        run: |
+          app=MacOptimizer.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = "$(tr -d '[:space:]' < VERSION)"
+          test -f "$app/Contents/Resources/AppIcon.icns"
+          test -d "$app/Contents/Resources/MacOptimizer_MacOptimizer.bundle/Contents/Resources/en.lproj"
+          test -d "$app/Contents/Resources/MacOptimizer_MacOptimizer.bundle/Contents/Resources/tr.lproj"
+          lipo "$app/Contents/MacOS/MacOptimizer" -verify_arch arm64
+          lipo "$app/Contents/MacOS/MacOptimizer" -verify_arch x86_64
+          "$app/Contents/MacOS/MacOptimizer" version | grep -F "v$(tr -d '[:space:]' < VERSION)"

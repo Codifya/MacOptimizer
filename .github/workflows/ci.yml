@@ -14,6 +14,8 @@ jobs:
   build-and-test:
     name: Build & Test (macOS)
     runs-on: macos-15
+    env:
+      CANARY_SERVICE_PREFIX: com.codifya.MacOptimizerTests.
 
     steps:
       - name: Checkout Code
@@ -29,24 +31,24 @@ jobs:
         run: swift --version
 
       - name: Build Package
-        run: swift build -v --scratch-path /private/tmp/macopt-006-build
+        run: swift build -v --scratch-path "${{ runner.temp }}/swift-build"
 
       - name: Capture host canary
         shell: bash
         run: |
           echo "CLIPBOARD_BEFORE=$(pbpaste | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_ENV"
-          echo "KEYCHAIN_ITEMS_BEFORE=$(security dump-keychain 2>/dev/null | awk -v service=\"com.codifya.MacOptimizerTests.\" 'index($0, service) { count++ } END { print count+0 }')" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_ITEMS_BEFORE=$(security dump-keychain 2>/dev/null | awk -v service="$CANARY_SERVICE_PREFIX" 'index($0, service) { count++ } END { print count+0 }')" >> "$GITHUB_ENV"
 
       - name: Run Test Suite
-        run: swift test --enable-code-coverage --scratch-path /private/tmp/macopt-006-build
+        run: swift test --enable-code-coverage --scratch-path "${{ runner.temp }}/swift-build"
 
       - name: Verify host canary
         shell: bash
         run: |
           clipboard_after=$(pbpaste | shasum -a 256 | awk '{print $1}')
-          keychain_items_after=$(security dump-keychain 2>/dev/null | awk -v service="com.codifya.MacOptimizerTests." 'index($0, service) { count++ } END { print count+0 }')
+          keychain_items_after=$(security dump-keychain 2>/dev/null | awk -v service="$CANARY_SERVICE_PREFIX" 'index($0, service) { count++ } END { print count+0 }')
           test "$clipboard_after" = "$CLIPBOARD_BEFORE"
           test "$keychain_items_after" = "$KEYCHAIN_ITEMS_BEFORE"
 
-      - name: Build Release Package
-        run: swift build -c release --scratch-path /private/tmp/macopt-006-build
+      - name: Build Release App Bundle
+        run: ./Scripts/build_app.sh

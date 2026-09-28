@@ -86,7 +86,7 @@ public struct DashboardView: View {
                                 .font(.system(size: 13, weight: .bold))
                             
                             if let firstInsight = appState.aiInsights.first {
-                                MetricBadge(text: firstInsight.severity.rawValue, colorName: firstInsight.severity.colorName)
+                                MetricBadge(text: firstInsight.severity.localizedTitle, colorName: firstInsight.severity.colorName)
                             }
                         }
                         

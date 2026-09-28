@@ -23,6 +23,10 @@ public actor AppUninstallerService {
     }
     
     public init() {}
+
+    public nonisolated static func isValidBundleIdentifier(_ value: String) -> Bool {
+        value.range(of: #"^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$"#, options: .regularExpression) != nil
+    }
     
     /// Finds all associated files, caches, preferences, containers, and logs for an application
     public func findAssociatedFiles(for app: InstalledApp) async -> [AppFileItem] {
@@ -34,7 +38,8 @@ public actor AppUninstallerService {
         }
         
         // 1. Main .app bundle
-        if SafetyGuard.isSafeToClean(path: app.path) {
+        let canonicalAppPath = URL(fileURLWithPath: app.path).standardizedFileURL.path
+        if canonicalAppPath.hasSuffix(".app") && (canonicalAppPath.hasPrefix("/Applications/") || canonicalAppPath.hasPrefix("\(homeDirectory.path)/Applications/")) {
             let mainAppSize = await JunkCleanerService.shared.calculateSize(at: URL(fileURLWithPath: app.path))
             items.append(AppFileItem(
                 id: app.path,
@@ -48,11 +53,9 @@ public actor AppUninstallerService {
         }
         
         let bundleId = app.bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        let appName = app.name.trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Validate identifier lengths to prevent parent directory matching
-        let validBundleId = bundleId.count >= 4 && bundleId.contains(".") && !bundleId.hasPrefix("com.apple.")
-        let validAppName = appName.count >= 2 && !SafetyGuard.essentialAppSupportFolders.contains(appName.lowercased())
+        let validBundleId = Self.isValidBundleIdentifier(bundleId) && !bundleId.hasPrefix("com.apple.")
         
         var targetLocations: [(subpath: String, label: String)] = []
         
@@ -68,15 +71,9 @@ public actor AppUninstallerService {
             targetLocations.append(("Library/LaunchAgents/\(bundleId).plist", "Başlangıç Servisi (LaunchAgent)"))
         }
         
-        if validAppName {
-            targetLocations.append(("Library/Application Support/\(appName)", "Application Support"))
-            targetLocations.append(("Library/Caches/\(appName)", "Önbellek (Caches)"))
-            targetLocations.append(("Library/Logs/\(appName)", "Uygulama Günlükleri"))
-        }
-        
         for loc in targetLocations {
             let targetURL = homeDirectory.appendingPathComponent(loc.subpath)
-            if fileManager.fileExists(atPath: targetURL.path) && SafetyGuard.isSafeToClean(path: targetURL.path) {
+            if fileManager.fileExists(atPath: targetURL.path) && !PathProtectionPolicy.isForbiddenPath(targetURL.path) {
                 let size = await JunkCleanerService.shared.calculateSize(at: targetURL)
                 if !items.contains(where: { $0.path == targetURL.path }) {
                     items.append(AppFileItem(
@@ -85,7 +82,7 @@ public actor AppUninstallerService {
                         name: targetURL.lastPathComponent,
                         locationName: loc.label,
                         sizeBytes: size,
-                        isSelected: true,
+                        isSelected: false,
                         isMainApp: false
                     ))
                 }
@@ -98,10 +95,8 @@ public actor AppUninstallerService {
             if let groupDirs = try? fileManager.contentsOfDirectory(at: groupContainersURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
                 for dir in groupDirs {
                     let dirName = dir.lastPathComponent.lowercased()
-                    if dirName == bundleId.lowercased() ||
-                       dirName.hasSuffix(".\(bundleId.lowercased())") ||
-                       (validAppName && appName.count >= 4 && dirName.contains(appName.lowercased()) && !dirName.hasPrefix("com.apple.")) {
-                        if SafetyGuard.isSafeToClean(path: dir.path) {
+                    if dirName == bundleId.lowercased() || dirName.hasPrefix("\(bundleId.lowercased()).") {
+                        if !PathProtectionPolicy.isForbiddenPath(dir.path) {
                             let size = await JunkCleanerService.shared.calculateSize(at: dir)
                             if !items.contains(where: { $0.path == dir.path }) {
                                 items.append(AppFileItem(
@@ -110,7 +105,7 @@ public actor AppUninstallerService {
                                     name: dir.lastPathComponent,
                                     locationName: "Grup Kapsayıcısı (Group Container)",
                                     sizeBytes: size,
-                                    isSelected: true,
+                                    isSelected: false,
                                     isMainApp: false
                                 ))
                             }
@@ -124,7 +119,7 @@ public actor AppUninstallerService {
     }
     
     /// Uninstalls and removes selected files safely using SafeOperationExecutor
-    public func uninstall(files: [AppFileItem]) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
+    public func uninstall(files: [AppFileItem], confirmation: SafeOperationExecutor.Confirmation) async -> (freedBytes: Int64, deletedCount: Int, failedCount: Int) {
         var totalFreed: Int64 = 0
         var deleted = 0
         var failed = 0
@@ -132,7 +127,7 @@ public actor AppUninstallerService {
         for file in files where file.isSelected {
             let url = URL(fileURLWithPath: file.path)
             do {
-                let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: true)
+                let result = try SafeOperationExecutor.removeFile(at: url, moveToTrash: true, confirmation: confirmation)
                 if result.success {
                     totalFreed += (result.bytesFreed > 0 ? result.bytesFreed : file.sizeBytes)
                     deleted += 1

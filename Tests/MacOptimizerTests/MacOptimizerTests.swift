@@ -2,6 +2,54 @@ import XCTest
 @testable import MacOptimizer
 
 final class MacOptimizerTests: XCTestCase {
+
+    func testExecutorRefusesDestructivePathWithoutConfirmation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("keep.txt")
+        try Data("safe".utf8).write(to: file)
+
+        XCTAssertThrowsError(try SafeOperationExecutor.removeFile(at: file))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    func testDeletionPolicyRejectsCacheLookalikePath() {
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Library/Caches/../../Documents/keep.txt").path
+        XCTAssertFalse(PathProtectionPolicy.isCleanableCachePath(path))
+    }
+
+    func testChangedSymlinkTargetFailsExecutorRevalidation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let first = root.appendingPathComponent("first")
+        let second = root.appendingPathComponent("second")
+        let link = root.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: first, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: second, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: first)
+        let validated = link.resolvingSymlinksInPath().standardizedFileURL
+        try FileManager.default.removeItem(at: link)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: second)
+        XCTAssertFalse(SafeOperationExecutor.stillResolvesTo(link, expected: validated))
+    }
+
+    func testCleanCacheRootsCanUseTemporaryHome() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let cacheItem = home.appendingPathComponent("Library/Caches/item")
+        try FileManager.default.createDirectory(at: cacheItem, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        XCTAssertTrue(PathProtectionPolicy.isCleanableCachePath(cacheItem.path, homeDirectory: home))
+    }
+
+    func testCLIExecuteRequiresYesAndBundleIdentifierValidation() {
+        XCTAssertTrue(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute"]))
+        XCTAssertFalse(CLICommandRunner.executionRequestedWithoutConfirmation(["clean", "--execute", "--yes"]))
+        XCTAssertTrue(AppUninstallerService.isValidBundleIdentifier("org.example.App-1"))
+        XCTAssertFalse(AppUninstallerService.isValidBundleIdentifier("org.example/../../Documents"))
+        XCTAssertFalse(AppUninstallerService.isValidBundleIdentifier("org..example"))
+    }
     
     // MARK: - 1. Property-Based Path Protection Tests (50+ Path Variations)
     func testSystemRootPathsForbidden() {

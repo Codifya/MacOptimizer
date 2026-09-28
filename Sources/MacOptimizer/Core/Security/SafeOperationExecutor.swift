@@ -29,10 +29,32 @@ public struct OperationExecutionResult: Sendable {
 
 /// Atomic, policy-governed executor for all filesystem, process, and maintenance operations.
 public struct SafeOperationExecutor: Sendable {
+    public struct Confirmation: Sendable {
+        fileprivate init() {}
+    }
+
+    /// Created only by the UI after presenting the reviewed plan.
+    public static func confirm(_ plan: CleaningPlan) -> Confirmation { Confirmation() }
+
+    public static func emptyTrash(_ items: [URL], confirmation: Confirmation) throws {
+        let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash").resolvingSymlinksInPath().standardizedFileURL
+        for item in items {
+            let target = item.resolvingSymlinksInPath().standardizedFileURL
+            guard target.path.hasPrefix(trash.path + "/"), target == item.resolvingSymlinksInPath().standardizedFileURL else {
+                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Yalnızca doğrulanmış Çöp Sepeti öğeleri boşaltılabilir."])
+            }
+            try FileManager.default.removeItem(at: target)
+        }
+    }
+
+    static func stillResolvesTo(_ url: URL, expected: URL) -> Bool {
+        url.resolvingSymlinksInPath().standardizedFileURL == expected
+    }
     
     /// Safely removes a file or directory after validating it against the SafetyPolicyEngine.
-    public static func removeFile(at url: URL, moveToTrash: Bool = true) throws -> OperationExecutionResult {
-        let canonicalPath = url.resolvingSymlinksInPath().standardizedFileURL.path
+    public static func removeFile(at url: URL, moveToTrash: Bool = true, confirmation: Confirmation? = nil) throws -> OperationExecutionResult {
+        let canonicalURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let canonicalPath = canonicalURL.path
         let decision = SafetyPolicyEngine.evaluate(.removeFile(path: canonicalPath))
         
         switch decision {
@@ -43,7 +65,13 @@ public struct SafeOperationExecutor: Sendable {
                 userInfo: [NSLocalizedDescriptionKey: "Güvenlik Engeli: \(reason)"]
             )
             
+        case .requiresConfirmation(_, _) where confirmation == nil:
+            throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Bu işlem için kullanıcı onayı gerekiyor."])
         case .allowed(let risk), .requiresConfirmation(let risk, _):
+            let currentURL = url.resolvingSymlinksInPath().standardizedFileURL
+            guard Self.stillResolvesTo(url, expected: canonicalURL), !PathProtectionPolicy.isForbiddenPath(currentURL.path) else {
+                throw NSError(domain: "SafeOperationExecutor", code: 403, userInfo: [NSLocalizedDescriptionKey: "Dosya yolu doğrulamadan sonra değişti."])
+            }
             let fm = FileManager.default
             guard fm.fileExists(atPath: canonicalPath) else {
                 return OperationExecutionResult(
@@ -62,18 +90,15 @@ public struct SafeOperationExecutor: Sendable {
             
             if moveToTrash {
                 var resultingURL: NSURL?
-                try fm.trashItem(at: url, resultingItemURL: &resultingURL)
+                try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
             } else {
                 // If it's pure cache, we can remove it directly
-                let isCacheOrTemp = canonicalPath.contains("/Library/Caches/") ||
-                                    canonicalPath.contains("/Library/Logs/") ||
-                                    canonicalPath.contains("/.Trash") ||
-                                    canonicalPath.contains("/Library/Developer/Xcode/DerivedData")
+                let isCacheOrTemp = PathProtectionPolicy.isCleanableCachePath(canonicalPath)
                 if isCacheOrTemp {
-                    try fm.removeItem(at: url)
+                    try fm.removeItem(at: canonicalURL)
                 } else {
                     var resultingURL: NSURL?
-                    try fm.trashItem(at: url, resultingItemURL: &resultingURL)
+                    try fm.trashItem(at: canonicalURL, resultingItemURL: &resultingURL)
                 }
             }
             

@@ -37,8 +37,11 @@ public struct PathProtectionPolicy: Sendable {
     
     /// User root and critical data directories that must NEVER be cleaned directly.
     public static var forbiddenUserPaths: [String] {
-        let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
-        return [
+        forbiddenUserPaths(homePath: FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path)
+    }
+
+    private static func forbiddenUserPaths(homePath home: String) -> [String] {
+        [
             home,
             "\(home)/Desktop",
             "\(home)/Documents",
@@ -72,8 +75,11 @@ public struct PathProtectionPolicy: Sendable {
     
     /// Whitelist of safe parent directories where item-level deletion is permitted.
     public static var safeParentPrefixes: [String] {
-        let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
-        return [
+        safeParentPrefixes(homePath: FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path)
+    }
+
+    private static func safeParentPrefixes(homePath home: String) -> [String] {
+        [
             "\(home)/Library/Caches/",
             "\(home)/Library/Logs/",
             "\(home)/Library/Developer/Xcode/DerivedData/",
@@ -98,7 +104,7 @@ public struct PathProtectionPolicy: Sendable {
     
     /// Evaluates if a given path is completely forbidden from deletion/cleaning.
     /// Resolves symlinks first to prevent symlink traversal attacks.
-    public static func isForbiddenPath(_ path: String) -> Bool {
+    public static func isForbiddenPath(_ path: String, homeDirectory: URL? = nil) -> Bool {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return true }
         
@@ -113,7 +119,8 @@ public struct PathProtectionPolicy: Sendable {
         }
         
         // 2. Check exact match with forbidden user paths
-        for forbidden in forbiddenUserPaths {
+        let injectedHome = homeDirectory?.resolvingSymlinksInPath().standardizedFileURL.path
+        for forbidden in injectedHome.map({ forbiddenUserPaths(homePath: $0) }) ?? forbiddenUserPaths {
             if canonicalPath == forbidden || trimmed == forbidden {
                 return true
             }
@@ -122,6 +129,7 @@ public struct PathProtectionPolicy: Sendable {
         // 3. Reject if path is within root system folders (unless it's an approved cache/log folder)
         let systemRoots = ["/System", "/usr", "/bin", "/sbin", "/etc", "/dev", "/private", "/cores", "/opt", "/Volumes", "/Library", "/Users", "/var"]
         for sysRoot in systemRoots {
+            if let injectedHome, (canonicalPath == injectedHome || canonicalPath.hasPrefix(injectedHome + "/")), (sysRoot == "/private" || sysRoot == "/var") { continue }
             if canonicalPath == sysRoot || canonicalPath.hasPrefix("\(sysRoot)/") || trimmed == sysRoot || trimmed.hasPrefix("\(sysRoot)/") {
                 // If it's inside /Users/username (and not /Users itself), allow subpath validation
                 let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
@@ -139,7 +147,7 @@ public struct PathProtectionPolicy: Sendable {
         }
         
         // 4. Protect essential developer & cloud config dirs in user home
-        let home = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
+        let home = injectedHome ?? FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().standardizedFileURL.path
         let protectedHiddenDirs = [
             "\(home)/.ssh", "\(home)/.gnupg", "\(home)/.aws", "\(home)/.config", "\(home)/.git"
         ]
@@ -153,7 +161,7 @@ public struct PathProtectionPolicy: Sendable {
     }
     
     /// Verifies if a file or folder is inside an approved cleanable cache / temporary directory.
-    public static func isCleanableCachePath(_ path: String) -> Bool {
+    public static func isCleanableCachePath(_ path: String, homeDirectory: URL? = nil) -> Bool {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         
@@ -161,12 +169,13 @@ public struct PathProtectionPolicy: Sendable {
         let canonicalPath = url.standardizedFileURL.path
         
         // Forbidden check must take absolute precedence
-        if isForbiddenPath(canonicalPath) || isForbiddenPath(trimmed) {
+        if isForbiddenPath(canonicalPath, homeDirectory: homeDirectory) || isForbiddenPath(trimmed, homeDirectory: homeDirectory) {
             return false
         }
         
         // Ensure path is deeply nested inside an approved prefix
-        for prefix in safeParentPrefixes {
+        let home = homeDirectory?.resolvingSymlinksInPath().standardizedFileURL.path
+        for prefix in home.map({ safeParentPrefixes(homePath: $0) }) ?? safeParentPrefixes {
             if (canonicalPath.hasPrefix(prefix) && canonicalPath != prefix && canonicalPath != String(prefix.dropLast())) ||
                (trimmed.hasPrefix(prefix) && trimmed != prefix && trimmed != String(prefix.dropLast())) {
                 return true

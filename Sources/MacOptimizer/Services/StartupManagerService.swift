@@ -91,13 +91,13 @@ public actor StartupManagerService {
     }
     
     /// Removes a launch agent file safely with SafeOperationExecutor validation
-    public func removeItem(_ item: LaunchAgentItem) async -> Bool {
+    public func removeItem(_ item: LaunchAgentItem, confirmation: SafeOperationExecutor.Confirmation) async -> Bool {
         guard !item.isProtected && item.itemType == .userAgent else {
             return false
         }
         
         _ = await toggleItem(item, enable: false)
-        let result = try? SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: item.path), moveToTrash: true)
+        let result = try? SafeOperationExecutor.removeFile(at: URL(fileURLWithPath: item.path), moveToTrash: true, confirmation: confirmation)
         return result?.success ?? false
     }
 }

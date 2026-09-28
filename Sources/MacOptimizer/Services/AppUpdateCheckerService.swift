@@ -61,10 +61,10 @@ public actor AppUpdateCheckerService {
             
             index = endIndex
             let progress = Double(index) / Swift.max(1.0, total)
-            progressHandler?("\(index)/\(apps.count) Uygulama Kontrol Edildi", progress)
+            progressHandler?(L10n.string("%lld/%lld Apps Checked", table: .services, index, apps.count), progress)
         }
         
-        progressHandler?("Güncelleme Kontrolü Tamamlandı", 1.0)
+        progressHandler?(L10n.string("Update Check Complete", table: .services), 1.0)
         return updatedApps
     }
     
@@ -133,10 +133,10 @@ public actor AppUpdateCheckerService {
     /// timeout sized for real downloads. Remote appcast data is never interpreted as a command.
     public func upgradeHomebrewCask(token: String) async -> (success: Bool, message: String) {
         guard Self.isValidCaskToken(token) else {
-            return (false, "Geçersiz Homebrew paket adı.")
+            return (false, L10n.string("Invalid Homebrew package name.", table: .services))
         }
         guard let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
-            return (false, "Homebrew bulunamadı.")
+            return (false, L10n.string("Homebrew not found.", table: .services))
         }
         let result = await SystemCommandRunner.run(
             executable: brew,
@@ -144,7 +144,7 @@ public actor AppUpdateCheckerService {
             timeoutSeconds: 900,
             outputLimit: 256 * 1024
         )
-        return (result.isSuccess, result.isSuccess ? "\(token) Homebrew üzerinden güncellendi." : "\(token) güncellenemedi: \(result.standardError.suffix(200))")
+        return (result.isSuccess, result.isSuccess ? L10n.string("%@ was updated via Homebrew.", table: .services, token) : L10n.string("%@ could not be updated: %@", table: .services, token, String(result.standardError.suffix(200))))
     }
     
     /// Checks Homebrew Cask outdated list

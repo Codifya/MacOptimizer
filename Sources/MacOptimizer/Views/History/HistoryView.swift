@@ -57,29 +57,29 @@ public struct HistoryView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Optimizasyon Geçmişi & SQLite Telemetri")
+                    Text(l10n: "Optimization History & SQLite Telemetry", table: .dashboard)
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                     
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 8) {
-                            Text("Toplam Kazanılan RAM: \(ByteFormatter.formatMemory(totalFreedRAM))")
+                            Text(L10n.string("Total RAM Recovered: %@", table: .dashboard, ByteFormatter.formatMemory(totalFreedRAM)))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.green)
                             
                             Text("•")
                                 .foregroundColor(.secondary)
                             
-                            Text("Toplam Kazanılan Disk: \(ByteFormatter.format(totalFreedDisk))")
+                            Text(L10n.string("Total Disk Recovered: %@", table: .dashboard, ByteFormatter.format(totalFreedDisk)))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.purple)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Kazanılan RAM: \(ByteFormatter.formatMemory(totalFreedRAM))")
+                            Text(L10n.string("RAM Recovered: %@", table: .dashboard, ByteFormatter.formatMemory(totalFreedRAM)))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.green)
-                            Text("Kazanılan Disk: \(ByteFormatter.format(totalFreedDisk))")
+                            Text(L10n.string("Disk Recovered: %@", table: .dashboard, ByteFormatter.format(totalFreedDisk)))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.purple)
                         }
@@ -89,7 +89,7 @@ public struct HistoryView: View {
                 Spacer(minLength: 12)
                 
                 if !appState.optimizationHistory.isEmpty {
-                    Button("Geçmişi Temizle") {
+                    Button(L10n.string("Clear History", table: .dashboard)) {
                         appState.clearHistory()
                     }
                     .buttonStyle(.plain)
@@ -109,15 +109,15 @@ public struct HistoryView: View {
         GlassCard(cornerRadius: 16, padding: 18) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Sistem Performans Geçmişi (SQLite)", systemImage: "waveform.path.ecg")
+                    Label(L10n.string("System Performance History (SQLite)", table: .dashboard), systemImage: "waveform.path.ecg")
                         .font(.system(size: 14, weight: .bold))
                     
                     Spacer()
                     
-                    Picker("Zaman Aralığı", selection: $timeRangeHours) {
-                        Text("Son 1 Saat").tag(1)
-                        Text("Son 24 Saat").tag(24)
-                        Text("Son 48 Saat").tag(48)
+                    Picker(L10n.string("Time Range", table: .dashboard), selection: $timeRangeHours) {
+                        Text(l10n: "Last 1 Hour", table: .dashboard).tag(1)
+                        Text(l10n: "Last 24 Hours", table: .dashboard).tag(24)
+                        Text(l10n: "Last 48 Hours", table: .dashboard).tag(48)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -131,17 +131,17 @@ public struct HistoryView: View {
                     Chart {
                         ForEach(historyPoints) { point in
                             LineMark(
-                                x: .value("Zaman", point.timestamp),
+                                x: .value(L10n.string("Time", table: .dashboard), point.timestamp),
                                 y: .value("CPU %", point.cpuUsage),
-                                series: .value("Metrik", "CPU")
+                                series: .value(L10n.string("Metric", table: .dashboard), "CPU")
                             )
                             .foregroundStyle(Color.orange)
                             .interpolationMethod(.catmullRom)
                             
                             LineMark(
-                                x: .value("Zaman", point.timestamp),
+                                x: .value(L10n.string("Time", table: .dashboard), point.timestamp),
                                 y: .value("RAM %", (Double(point.ramUsedBytes) / Double(max(1, ProcessInfo.processInfo.physicalMemory))) * 100.0),
-                                series: .value("Metrik", "RAM")
+                                series: .value(L10n.string("Metric", table: .dashboard), "RAM")
                             )
                             .foregroundStyle(Color.blue)
                             .interpolationMethod(.catmullRom)
@@ -176,7 +176,7 @@ public struct HistoryView: View {
                             Image(systemName: "circle.dotted")
                                 .font(.system(size: 28))
                                 .foregroundColor(.secondary)
-                            Text("Bu zaman aralığında yeterli SQLite telemetri kaydı bulunamadı.")
+                            Text(l10n: "Not enough SQLite telemetry records were found in this time range.", table: .dashboard)
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -188,17 +188,17 @@ public struct HistoryView: View {
                 HStack(spacing: 16) {
                     HStack(spacing: 6) {
                         Circle().fill(Color.orange).frame(width: 8, height: 8)
-                        Text("CPU Kullanımı").font(.system(size: 11, weight: .semibold))
+                        Text(l10n: "CPU Usage", table: .dashboard).font(.system(size: 11, weight: .semibold))
                     }
                     
                     HStack(spacing: 6) {
                         Circle().fill(Color.blue).frame(width: 8, height: 8)
-                        Text("RAM Kullanımı").font(.system(size: 11, weight: .semibold))
+                        Text(l10n: "RAM Usage", table: .dashboard).font(.system(size: 11, weight: .semibold))
                     }
                     
                     Spacer()
                     
-                    Text("\(historyPoints.count) Veri Noktası (SQLite WAL)")
+                    Text(L10n.string("%lld data points (SQLite WAL)", table: .dashboard, Int64(historyPoints.count)))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -260,10 +260,10 @@ public struct HistoryView: View {
                     .font(.system(size: 40))
                     .foregroundColor(.secondary.opacity(0.5))
                 
-                Text("Henüz Optimizasyon Kaydı Yok")
+                Text(l10n: "No Optimization Records Yet", table: .dashboard)
                     .font(.system(size: 15, weight: .semibold))
                 
-                Text("Yaptığınız dosya temizleme işlemleri burada listelenecektir.")
+                Text(l10n: "Your file cleanup operations will be listed here.", table: .dashboard)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

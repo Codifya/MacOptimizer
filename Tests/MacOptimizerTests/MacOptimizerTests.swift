@@ -666,8 +666,8 @@ final class MacOptimizerTests: XCTestCase {
         
         XCTAssertFalse(alerts.isEmpty, "Watchdog should generate alerts for critical metrics")
         let titles = alerts.map { $0.title }
-        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") }))
-        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Bellek") || $0.contains("RAM") || $0.contains("Memory") }))
+        XCTAssertTrue(titles.contains(where: { $0.contains("Termal") || $0.contains("Sıcaklık") || $0.contains("Thermal") }))
         XCTAssertTrue(titles.contains(where: { $0.contains("Swap") }))
         XCTAssertTrue(titles.contains(where: { $0.contains("Disk") }))
     }

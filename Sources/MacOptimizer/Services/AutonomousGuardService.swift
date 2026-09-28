@@ -59,8 +59,8 @@ public actor AutonomousGuardService {
         let ramPercent = memory.usedPercentage * 100.0
         if ramPercent >= config.ramThresholdPercent || memory.pressureLevel == .critical {
             generatedAlerts.append(AutonomousAlert(
-                title: "Yüksek Bellek Baskısı Uyarısı",
-                message: "RAM kullanımı %\(Int(ramPercent)) seviyesine ulaştı. Bellek baskısını azaltmak için en çok bellek kullanan uygulamaları kapatmayı deneyin.",
+                title: L10n.string("High Memory Pressure Warning", table: .services),
+                message: L10n.string("RAM usage has reached %lld%%. Try closing the apps using the most memory to reduce memory pressure.", table: .services, Int(ramPercent)),
                 type: .memorySpike,
                 timestamp: now,
                 isResolved: false,
@@ -84,13 +84,13 @@ public actor AutonomousGuardService {
                 
                 if count >= 3 { // Detected high CPU for 3 consecutive samples
                     let alert = AutonomousAlert(
-                        title: "Kaçak Süreç: \(proc.name)",
-                        message: "\(proc.name) (PID: \(proc.pid)) sürekli olarak %\(proc.cpuFormatted) işlemci tüketiyor. Donmuş veya aşırı yüklenmiş olabilir.",
+                        title: L10n.string("Runaway Process: %@", table: .services, proc.name),
+                        message: L10n.string("%@ (PID: %d) is continuously consuming %@ CPU. It may be frozen or overloaded.", table: .services, proc.name, proc.pid, proc.cpuFormatted),
                         type: .runawayProcess,
                         timestamp: now,
                         isResolved: false,
                         autoHealed: false,
-                        action: AIAction(title: "İşlemi Sonlandır", type: .killProcess, targetPID: proc.pid)
+                        action: AIAction(title: L10n.string("Terminate Process", table: .services), type: .killProcess, targetPID: proc.pid)
                     )
                     generatedAlerts.append(alert)
                     consecutiveHighCPUCounts[proc.pid] = 0 // Reset count after alert
@@ -107,8 +107,8 @@ public actor AutonomousGuardService {
             if canAlertThermal {
                 lastThermalAlertTime = now
                 let alert = AutonomousAlert(
-                    title: "Termal Kısılma / Sıcaklık Uyarısı",
-                    message: "İşlemci sıcaklığı kritik eşiğe ulaştı (\(cpu.thermalState.rawValue)). Donanımı korumak için yüksek işlemci kullanan uygulamaları kapatın.",
+                    title: L10n.string("Thermal Throttling / Temperature Warning", table: .services),
+                    message: L10n.string("CPU temperature has reached a critical threshold (%@). Close apps with high CPU usage to protect the hardware.", table: .services, cpu.thermalState.rawValue),
                     type: .runawayProcess,
                     timestamp: now,
                     isResolved: false,
@@ -125,8 +125,8 @@ public actor AutonomousGuardService {
             if canAlertSwap {
                 lastSwapAlertTime = now
                 let alert = AutonomousAlert(
-                    title: "Yüksek Swap (Takas Alanı) Kullanımı",
-                    message: "Sistem diski üzerinde \(ByteFormatter.formatMemory(memory.swapUsedBytes)) sanal bellek takası kullanılıyor. Bellek baskısını azaltmak için yoğun uygulamaları kapatın.",
+                    title: L10n.string("High Swap Usage", table: .services),
+                    message: L10n.string("%@ of virtual memory swap is in use on the system disk. Close heavy apps to reduce memory pressure.", table: .services, ByteFormatter.formatMemory(memory.swapUsedBytes)),
                     type: .memorySpike,
                     timestamp: now,
                     isResolved: false,
@@ -143,13 +143,13 @@ public actor AutonomousGuardService {
             if canAlertDisk {
                 lastDiskAlertTime = now
                 let alert = AutonomousAlert(
-                    title: "Düşük Disk Alanı Uyarısı",
-                    message: "Ana disk üzerinde yalnızca \(ByteFormatter.format(disk.freeBytes)) boş alan kaldı. Alan kazanmak için gereksiz sistem önbelleklerini temizleyin.",
+                    title: L10n.string("Low Disk Space Warning", table: .services),
+                    message: L10n.string("Only %@ of free space is left on the main disk. Clean unnecessary system caches to free up space.", table: .services, ByteFormatter.format(disk.freeBytes)),
                     type: .lowDisk,
                     timestamp: now,
                     isResolved: false,
                     autoHealed: false,
-                    action: AIAction(title: "Gereksiz Dosyaları Tara", type: .cleanJunk)
+                    action: AIAction(title: L10n.string("Scan Junk Files", table: .services), type: .cleanJunk)
                 )
                 generatedAlerts.append(alert)
             }

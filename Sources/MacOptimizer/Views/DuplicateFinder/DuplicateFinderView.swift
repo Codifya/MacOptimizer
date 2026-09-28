@@ -100,7 +100,7 @@ public struct DuplicateFinderView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: selectedTargets.contains(target) ? "checkmark.circle.fill" : "circle")
                                     .font(.system(size: 10))
-                                Text(target.rawValue)
+                                Text(verbatim: target.localizedTitle)
                                     .font(.system(size: 11, weight: .medium))
                             }
                             .padding(.horizontal, 8)

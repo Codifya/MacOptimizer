@@ -37,6 +37,16 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.string("Dashboard", language: "en"), "Dashboard")
         XCTAssertEqual(L10n.string("Dashboard", language: "tr"), "Genel Bakış")
     }
+
+    func testLookupUsesPreferredAppleLanguage() {
+        let prior = UserDefaults.standard.object(forKey: "AppleLanguages")
+        UserDefaults.standard.set(["tr"], forKey: "AppleLanguages")
+        defer {
+            if let prior { UserDefaults.standard.set(prior, forKey: "AppleLanguages") }
+            else { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        }
+        XCTAssertEqual(L10n.string("Dashboard"), "Genel Bakış")
+    }
 }
 
 private extension L10n.Table {
